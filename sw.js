@@ -1,10 +1,11 @@
-const CACHE_NAME = 'study-flow-v2-shell-1';
+const CACHE_NAME = 'study-flow-v2-shell-2';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
   './theme.js',
   './ai.js',
+  './cloud-sync.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon.svg'
