@@ -71,7 +71,7 @@ Service Worker / PWA 功能需要 HTTPS 或 localhost 环境。直接用 `file:/
 
 | 服务商 | API Base URL 示例 | 模型 ID |
 |---|---|---|
-| DeepSeek | `https://api.deepseek.com` | 填写账号当前可用模型，例如 `deepseek-chat` |
+| DeepSeek | `https://api.deepseek.com` | 默认配置为 `deepseek-flash`；如账号不可用，请改成服务商控制台提供的模型 ID |
 | OpenAI | `https://api.openai.com/v1` | 填写 API 账号当前可用模型 |
 | 自定义 | 服务商提供的 OpenAI 兼容地址 | 服务商提供的模型 ID |
 
