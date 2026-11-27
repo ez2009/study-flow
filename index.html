@@ -140,6 +140,7 @@ html[data-theme="dark"] .mobile-nav button{color:#aebdcb}html[data-theme="dark"]
       <div class="field"><label>午间休息开始</label><input type="time" id="breakStart" value="12:00"></div>
       <div class="field"><label>午间休息结束</label><input type="time" id="breakEnd" value="14:00"></div>
      </div>
+     <div class="ai-hint" style="margin:-2px 0 10px">作息时间会自动记忆并保存在本机。下次打开或生成周末计划时自动沿用，无需重复填写。<span id="weekendRoutineStatus" style="display:block;margin-top:3px;color:var(--green)">正在读取已保存作息…</span></div>
      <details class="advanced-options"><summary>更多安排选项（可不设置）</summary>
       <div class="field"><label>学习强度</label><select id="intensity"><option value="light">轻松 · 更多自由时间</option><option value="standard" selected>标准 · 均衡安排</option><option value="focused">集中 · 较高学习量</option></select></div>
       <div class="field"><label>安排倾向</label><select id="planMode"><option value="balanced">均衡安排</option><option value="weak">薄弱科目优先</option><option value="urgent">重要紧急优先</option><option value="exam">考试复习优先</option></select></div>
@@ -311,6 +312,31 @@ function dbPutMany(store,objects){return new Promise((res,rej)=>{let tx=db.trans
 function dbDelete(store,id){return new Promise((res,rej)=>{let tx=db.transaction(store,'readwrite');tx.objectStore(store).delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 async function dbClear(store){return new Promise((res,rej)=>{let tx=db.transaction(store,'readwrite');tx.objectStore(store).clear();tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 async function loadState(){for(let k of ['resources','tasks','plans','sessions','reviews','settings'])state[k]=await dbGetAll(k)}
+const WEEKEND_ROUTINE_ID='weekend-routine-template';
+function getWeekendRoutine(){return state.settings.find(x=>x.id===WEEKEND_ROUTINE_ID)||null}
+function readWeekendRoutineForm(){
+ return {satStart:$('satStart').value||'09:00',satEnd:$('satEnd').value||'17:00',sunStart:$('sunStart').value||'09:00',sunEnd:$('sunEnd').value||'17:00',breakStart:$('breakStart').value||'12:00',breakEnd:$('breakEnd').value||'14:00',intensity:$('intensity').value||'standard',mode:$('planMode').value||'balanced',blocked:$('blocked').value||''};
+}
+function applyWeekendRoutine(routine){
+ if(!routine)return;
+ for(const id of ['satStart','satEnd','sunStart','sunEnd','breakStart','breakEnd','intensity','planMode','blocked']){
+  const el=$(id);if(el&&routine[id]!==undefined)el.value=routine[id];
+ }
+}
+async function saveWeekendRoutineFromForm(){
+ const routine={id:WEEKEND_ROUTINE_ID,type:'weekendRoutine',...readWeekendRoutineForm(),updatedAt:Date.now()};
+ await persist('settings',routine);
+ const hint=document.getElementById('weekendRoutineStatus');if(hint)hint.textContent='已自动记忆 · 下次打开会继续沿用';
+ return routine;
+}
+async function initWeekendRoutineMemory(){
+ const saved=getWeekendRoutine();
+ if(saved)applyWeekendRoutine(saved);
+ else await saveWeekendRoutineFromForm();
+ const ids=['satStart','satEnd','sunStart','sunEnd','breakStart','breakEnd','intensity','planMode','blocked'];
+ ids.forEach(id=>{const el=$(id);if(!el)return;el.addEventListener('change',()=>saveWeekendRoutineFromForm().catch(e=>{console.error('保存周末作息失败',e);toast('作息记忆保存失败，请检查本地存储')}));});
+ const hint=document.getElementById('weekendRoutineStatus');if(hint)hint.textContent='已自动记忆 · 下次打开会继续沿用';
+}
 async function persist(store,obj){await dbPut(store,obj);let i=state[store].findIndex(x=>x.id===obj.id);if(i<0)state[store].push(obj);else state[store][i]=obj}
 async function remove(store,id){await dbDelete(store,id);state[store]=state[store].filter(x=>x.id!==id)}
 function toast(msg){let t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2300)}
@@ -444,6 +470,7 @@ function scoreItem(x,mode){
 }
 async function generatePlan(){
  let items=selectedItems();if(!items.length){toast('请先选择至少一项未完成的学习内容');return}
+ await saveWeekendRoutineFromForm();
  let config={satStart:mins($('satStart').value),satEnd:mins($('satEnd').value),sunStart:mins($('sunStart').value),sunEnd:mins($('sunEnd').value),breakStart:mins($('breakStart').value),breakEnd:mins($('breakEnd').value),intensity:$('intensity').value,mode:$('planMode').value,blocked:parseBlocked()};
  if(config.satEnd<=config.satStart||config.sunEnd<=config.sunStart){toast('请检查开始和结束时间');return}
  if(config.breakEnd<config.breakStart){toast('午间休息时间不正确');return}
@@ -654,7 +681,7 @@ function exportData(){let data={app:'STUDY FLOW',version:1,exportedAt:new Date()
 async function importData(e){let file=e.target.files[0];if(!file)return;try{let data=JSON.parse(await file.text());if(data.app!=='STUDY FLOW'||!Array.isArray(data.resources)||!Array.isArray(data.tasks))throw new Error('文件格式不正确');if(!confirm('导入将覆盖当前本地数据，建议先导出备份。确定继续吗？'))return;for(let k of ['resources','tasks','plans','sessions','reviews','settings']){await dbClear(k);state[k]=Array.isArray(data[k])?data[k]:[];for(let obj of state[k])await dbPut(k,obj)}renderAll();toast('数据恢复成功')}catch(err){alert('导入失败：'+err.message)}e.target.value=''}
 async function clearAllData(){if(!confirm('确定清空当前浏览器中的全部 STUDY FLOW 数据？此操作无法撤销，请先备份。'))return;if(!confirm('再次确认：所有资料、任务、计划和记录都会被删除。'))return;for(let k of ['resources','tasks','plans','sessions','reviews','settings']){await dbClear(k);state[k]=[]}generatedPlan=null;renderAll();toast('本地数据已清空')}
 function initDate(){let d=new Date();$('todayText').textContent=d.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});let h=d.getHours();$('greeting').textContent=h<11?'早上好，今天也向目标迈进一步。':h<18?'下午好，今天也向目标迈进一步。':'晚上好，给今天一个轻松的收尾。';let dates=weekendDates();$('weekendLabel').textContent=dates.join(' / ')}
-(async function init(){try{db=await openDB();await loadState();initDate();renderAll()}catch(e){console.error(e);alert('本地数据库初始化失败。请使用较新的 Chrome、Edge、Safari 或 Firefox 浏览器，并避免在隐私浏览模式下运行。')}})();
+(async function init(){try{db=await openDB();await loadState();await initWeekendRoutineMemory();initDate();renderAll()}catch(e){console.error(e);alert('本地数据库初始化失败。请使用较新的 Chrome、Edge、Safari 或 Firefox 浏览器，并避免在隐私浏览模式下运行。')}})();
 </script>
 <script src="./theme.js"></script>
 <script src="./ai.js"></script>
