@@ -1,6 +1,6 @@
 /* STUDY FLOW · GitHub encrypted cloud sync
  * Cloud data is encrypted with AES-GCM before it is sent to the repository.
- * The GitHub token is stored only in this browser's localStorage.
+ * GitHub token and (when opted in) the encryption password are stored locally per browser/device.
  */
 (() => {
   'use strict';
@@ -12,12 +12,14 @@
   const STORES = ['resources','tasks','plans','sessions','reviews','settings'];
   const TOKEN_KEY = 'study-flow-github-token';
   const BASELINE_KEY = 'study-flow-cloud-baseline';
+  const PASSWORD_KEY = 'study-flow-cloud-password';
   let cryptoKey = null;
   let saltB64 = null;
   let lastLocalFingerprint = '';
   let busy = false;
   let timer = null;
   let autoEnabled = true;
+  let remoteCheckAt = 0;
 
   const el = id => document.getElementById(id);
   const say = (msg, bad=false) => {
@@ -133,7 +135,20 @@
   const fingerprint = data => JSON.stringify(STORES.map(k=>data[k]||[]));
   function baseline() { try{return JSON.parse(localStorage.getItem(BASELINE_KEY)||'null')}catch{return null} }
   function setBaseline(sha, fp) { localStorage.setItem(BASELINE_KEY,JSON.stringify({sha,fingerprint:fp,at:Date.now()})); lastLocalFingerprint=fp; }
-  function getPassword() { return el('cloudPassword')?.value || ''; }
+  function getPassword() { return el('cloudPassword')?.value || localStorage.getItem(PASSWORD_KEY) || ''; }
+  function rememberCredentials() {
+    const token=el('cloudToken')?.value.trim()||'';
+    if(token)localStorage.setItem(TOKEN_KEY,token);
+    const password=el('cloudPassword')?.value||'';
+    if(el('cloudRememberPassword')?.checked && password) localStorage.setItem(PASSWORD_KEY,password);
+    else if(!el('cloudRememberPassword')?.checked) localStorage.removeItem(PASSWORD_KEY);
+  }
+  function restoreCredentials() {
+    if(el('cloudToken'))el('cloudToken').value=localStorage.getItem(TOKEN_KEY)||'';
+    const savedPassword=localStorage.getItem(PASSWORD_KEY)||'';
+    if(el('cloudPassword')&&savedPassword)el('cloudPassword').value=savedPassword;
+    if(el('cloudRememberPassword'))el('cloudRememberPassword').checked=true;
+  }
 
   async function uploadInitial(password, remote) {
     const data=await snapshot(), fp=fingerprint(data);
@@ -157,7 +172,7 @@
       if (password.length<10) throw new Error('请设置至少 10 位的云同步加密密码。请在所有设备使用同一个密码。');
       const token=el('cloudToken')?.value.trim();
       if (!token) throw new Error('请填写 GitHub Token。');
-      localStorage.setItem(TOKEN_KEY,token);
+      rememberCredentials();
       say('正在检查云端数据…');
       const [remote,data]=await Promise.all([readRemote(),snapshot()]);
       const fp=fingerprint(data), base=baseline();
@@ -191,23 +206,54 @@
     } catch(err) { say(err.message || '同步失败',true); }
     finally { busy=false; }
   }
+  async function checkForChanges() {
+    if(!autoEnabled || busy || document.visibilityState==='hidden')return;
+    const password=getPassword();
+    if(password.length<10)return;
+    busy=true;
+    try{
+      const [remote,data]=await Promise.all([readRemote(),snapshot()]);
+      const fp=fingerprint(data),base=baseline();
+      if(!base){say('尚未建立同步关系。请先点击「立即同步」完成首次连接。');return;}
+      if(!remote){say('云端备份暂时无法读取；本机数据保持不变。',true);return;}
+      const localChanged=fp!==base.fingerprint;
+      const remoteChanged=remote.sha!==base.sha;
+      if(remoteChanged && !localChanged){
+        say('检测到其他设备有新数据，正在自动下载…');
+        await downloadRemote(remote,password);
+        return;
+      }
+      if(remoteChanged && localChanged){
+        say('本机和云端都发生了修改，已暂停自动同步以保护数据。请手动选择下载云端或上传本机覆盖。',true);
+        return;
+      }
+      if(!remoteChanged && localChanged){
+        busy=false;
+        await syncNow('normal');
+        return;
+      }
+      say('已同步 · 本机与云端一致');
+    }catch(err){say('自动同步检查失败：'+err.message,true);}
+    finally{busy=false;}
+  }
   function startAuto() {
     if (timer) clearInterval(timer);
-    timer=setInterval(async()=>{
-      if (!autoEnabled || busy || !cryptoKey && !getPassword()) return;
-      try {
-        const data=await snapshot(), fp=fingerprint(data), base=baseline();
-        if (base && fp!==base.fingerprint) await syncNow('normal');
-      } catch(err) { say('自动同步检查失败：'+err.message,true); }
-    },20000);
+    timer=setInterval(checkForChanges,20000);
+    window.addEventListener('focus',checkForChanges);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkForChanges()});
   }
   function init() {
-    const token=localStorage.getItem(TOKEN_KEY)||'';
-    if (el('cloudToken')) el('cloudToken').value=token;
+    restoreCredentials();
+    el('cloudRememberPassword')?.addEventListener('change',e=>{
+      if(!e.target.checked){localStorage.removeItem(PASSWORD_KEY);say('已关闭本机密码记忆；当前页面仍可继续同步');}
+      else if(getPassword()){localStorage.setItem(PASSWORD_KEY,getPassword());say('已在本机记住加密密码');}
+    });
     el('cloudSaveToken')?.addEventListener('click',()=>{
       const value=el('cloudToken').value.trim();
       if (!value) {localStorage.removeItem(TOKEN_KEY);say('已清除本机保存的 Token');return;}
-      localStorage.setItem(TOKEN_KEY,value);say('Token 已保存在本机浏览器');
+      localStorage.setItem(TOKEN_KEY,value);
+      rememberCredentials();
+      say('GitHub Token 和所选凭据记忆设置已保存到本机浏览器');
     });
     el('cloudSyncNow')?.addEventListener('click',()=>syncNow('normal'));
     el('cloudDownload')?.addEventListener('click',()=>syncNow('download'));
