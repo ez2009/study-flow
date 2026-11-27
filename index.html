@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#f7f8fa" id="metaThemeColor">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="STUDY FLOW">
+<meta name="apple-mobile-web-app-title" content="STUDY FLOW">\n<meta name="description" content="STUDY FLOW：个人学习任务管理、周末计划、学习计时与 AI 辅助。">\n<link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <title>STUDY FLOW · Personal Study System</title>
@@ -121,7 +121,7 @@ html[data-theme="dark"] .mobile-nav button{color:#aebdcb}html[data-theme="dark"]
 
   <section class="page" id="page-tasks">
    <div class="page-head"><div><div class="eyebrow">TO-DO LIST</div><h1>待办任务</h1><div class="sub">把作业和其他要做的事记下来，设置优先级。</div></div><button class="btn primary" onclick="openTaskModal()">＋ 新建任务</button></div>
-   <div class="toolbar"><div class="pill-tabs" id="taskTabs"><button class="active" data-filter="all">全部任务</button><button data-filter="pending">待完成</button><button data-filter="done">已完成</button></div><label style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)"><input type="checkbox" id="taskAIAssist" onchange="document.getElementById('taskAIClassify').disabled=!this.checked"> AI 辅助划分</label><button class="btn small" id="taskAIClassify" type="button" onclick="aiClassifyTasks()" disabled>✦ 分析待办任务</button></div><div class="ai-hint" id="taskAIStatus" style="margin:-7px 0 12px">勾选后，可让 AI 根据任务内容、截止日期提出四象限分类建议；确认后才会修改任务。</div>
+   <div class="toolbar"><div class="pill-tabs" id="taskTabs"><button class="active" data-filter="all">全部任务</button><button data-filter="pending">待完成</button><button data-filter="done">已完成</button></div><label style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)"><input type="checkbox" id="taskAIAssist" onchange="document.getElementById('taskAIClassify').disabled=!this.checked"> AI 辅助划分</label><button class="btn small" id="taskAIClassify" type="button" onclick="aiClassifyTasks()" disabled>✦ 分析待办任务</button></div><div class="ai-hint" id="taskAIStatus" style="margin:-7px 0 12px">勾选后会将待办任务名称、科目、备注和截止日期发送给已配置的 AI 服务商；AI 只提出建议，确认后才会修改分类。</div>
    <div class="grid quad-grid" id="quadrants"></div>
    <div style="height:16px"></div><div class="card"><div class="section-title">任务列表 <small id="taskCount"></small></div><div id="taskTable"></div></div>
   </section>
@@ -150,7 +150,7 @@ html[data-theme="dark"] .mobile-nav button{color:#aebdcb}html[data-theme="dark"]
      <div id="plannerChoices"></div>
      <div style="height:12px"></div>
      <div class="section-title">03 · 计划原则</div>
-     <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:0 0 9px"><input type="checkbox" id="plannerAIAssist"> AI 辅助制定周末计划</label><div class="ai-hint" id="plannerAIStatus" style="margin-bottom:9px">勾选后，AI 会结合所选任务、薄弱科目、重要程度和可用时间提出安排建议；最终时间仍由系统校验，你可以继续手动调整。</div><div class="review-box">系统会优先安排重要、紧急或薄弱科目任务；尽量交替安排高强度与低强度内容；保留自由时间和任务间隔。预计时间仅为初始估算，你可以在生成后手动调整。</div>
+     <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:0 0 9px"><input type="checkbox" id="plannerAIAssist"> AI 辅助制定周末计划</label><div class="ai-hint" id="plannerAIStatus" style="margin-bottom:9px">仅在勾选时，所选任务信息和可用时段会发送给已配置的 AI 服务商。AI 提出排序与时长建议，最终排程仍由系统校验。</div><div class="review-box">系统会优先安排重要、紧急或薄弱科目任务；尽量交替安排高强度与低强度内容；保留自由时间和任务间隔。预计时间仅为初始估算，你可以在生成后手动调整。</div>
     </div>
    </div>
    <div style="height:18px"></div>
@@ -306,6 +306,7 @@ const weekendDates=()=>{let d=new Date(),day=d.getDay(),sat=new Date(d);sat.setD
 function openDB(){return new Promise((resolve,reject)=>{let req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{let d=req.result;['resources','tasks','plans','sessions','reviews','settings'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 function dbGetAll(store){return new Promise((res,rej)=>{let r=db.transaction(store,'readonly').objectStore(store).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error)})}
 function dbPut(store,obj){return new Promise((res,rej)=>{let tx=db.transaction(store,'readwrite');tx.objectStore(store).put(obj);tx.oncomplete=()=>res(obj);tx.onerror=()=>rej(tx.error)})}
+function dbPutMany(store,objects){return new Promise((res,rej)=>{let tx=db.transaction(store,'readwrite'),os=tx.objectStore(store);objects.forEach(obj=>os.put(obj));tx.oncomplete=()=>res(objects);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||new Error('数据库事务已中止'))})}
 function dbDelete(store,id){return new Promise((res,rej)=>{let tx=db.transaction(store,'readwrite');tx.objectStore(store).delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 async function dbClear(store){return new Promise((res,rej)=>{let tx=db.transaction(store,'readwrite');tx.objectStore(store).clear();tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 async function loadState(){for(let k of ['resources','tasks','plans','sessions','reviews','settings'])state[k]=await dbGetAll(k)}
@@ -377,18 +378,28 @@ function openTaskModal(id=null){
 async function toggleTask(id){let t=state.tasks.find(x=>x.id===id);t.status=t.status==='done'?'pending':'done';t.completedAt=t.status==='done'?Date.now():null;await persist('tasks',t);renderAll()}
 async function deleteTask(id){if(!confirm('删除这个任务？'))return;await remove('tasks',id);renderAll()}
 function quadrant(t){return t.importance&&t.urgent?'q1':t.importance?'q2':t.urgent?'q3':'q4'}
-function parseAIJSON(text){let cleaned=String(text||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');let start=cleaned.indexOf('{'),end=cleaned.lastIndexOf('}');if(start<0||end<start)throw new Error('AI 没有返回有效 JSON，请重试。');return JSON.parse(cleaned.slice(start,end+1));}
+function parseAIJSON(text){
+ let cleaned=String(text||'').trim().replace(/^\\x60{3}(?:json)?\\s*/i,'').replace(/\\s*\\x60{3}$/,'');
+ const start=cleaned.indexOf('{');if(start<0)throw new Error('AI 没有返回 JSON 对象，请重试。');
+ let depth=0,inString=false,escaped=false,end=-1;
+ for(let i=start;i<cleaned.length;i++){const ch=cleaned[i];if(inString){if(escaped)escaped=false;else if(ch==='\\\\')escaped=true;else if(ch==='"')inString=false;continue}if(ch==='"'){inString=true;continue}if(ch==='{')depth++;else if(ch==='}'){depth--;if(depth===0){end=i;break}}}
+ if(end<0)throw new Error('AI 返回的 JSON 不完整，请重试。');
+ try{return JSON.parse(cleaned.slice(start,end+1))}catch{throw new Error('AI 返回的 JSON 格式无效，请重试。')}
+}
 async function aiClassifyTasks(){
  const check=$('taskAIAssist'),status=$('taskAIStatus'),btn=$('taskAIClassify');if(!check?.checked){toast('请先勾选 AI 辅助划分');return}
  const tasks=state.tasks.filter(t=>t.status!=='done');if(!tasks.length){toast('目前没有待划分的待办任务');return}
  if(typeof window.studyFlowAIRequest!=='function'){toast('AI 模块尚未加载，请刷新页面');return}btn.disabled=true;status.textContent='AI 正在分析任务内容…';
  try{
-  const prompt='请为以下学习任务判断四象限。重要(importance)和紧急(urgent)均为0或1。重要性看长期学习价值、考试影响、基础薄弱程度；紧急性看截止日期和时间压力。不要把所有任务都判为重要且紧急。只返回 JSON：{"tasks":[{"id":"原始id","importance":0或1,"urgent":0或1,"reason":"不超过20字的理由"}]}。不要修改任务名称或其他字段。\n任务：'+JSON.stringify(tasks.map(t=>({id:t.id,name:t.name,subject:t.subject,note:t.note||'',dueDate:t.dueDate||'',priority:t.priority,estimate:t.estimate})));
-  const raw=await window.studyFlowAIRequest('你是严谨的学习任务管理助手。根据任务事实做合理判断，不要臆测缺失的截止日期。只输出合法 JSON。',prompt);const result=parseAIJSON(raw),byId=new Map((result.tasks||[]).map(x=>[String(x.id),x]));
-  const proposals=tasks.filter(t=>byId.has(String(t.id))).map(t=>{const x=byId.get(String(t.id));return {task:t,importance:Number(x.importance)?1:0,urgent:Number(x.urgent)?1:0,reason:String(x.reason||'AI 分类建议')}});if(!proposals.length)throw new Error('AI 返回结果中没有匹配的任务。');
+  const prompt='请为每一项任务判断四象限。importance 和 urgent 必须是整数 0 或 1。重要性依据长期学习价值、考试影响和基础薄弱程度；紧急性依据明确的截止日期和时间压力。没有截止日期时不要凭空制造紧迫性。必须覆盖全部任务且每个 id 只出现一次。只返回 JSON：{"tasks":[{"id":"原始id","importance":0,"urgent":0,"reason":"不超过24字的理由"}]}。\\n任务：'+JSON.stringify(tasks.map(t=>({id:t.id,name:t.name,subject:t.subject,note:t.note||'',dueDate:t.dueDate||null,priority:t.priority,estimate:t.estimate})));
+  const raw=await window.studyFlowAIRequest('你是严谨的学习任务管理助手。只根据输入事实判断；缺少信息时采用保守判断。只输出合法 JSON，不要 Markdown。',prompt);
+  const result=parseAIJSON(raw);if(!Array.isArray(result.tasks)||result.tasks.length!==tasks.length)throw new Error('AI 没有为全部任务提供分类，未修改任何数据。');
+  const byId=new Map();for(const item of result.tasks){const id=String(item.id);if(byId.has(id)||![0,1].includes(item.importance)||![0,1].includes(item.urgent))throw new Error('AI 分类结果包含重复任务或无效象限值，未修改任何数据。');byId.set(id,item)}
+  if(tasks.some(t=>!byId.has(String(t.id)))||byId.size!==tasks.length)throw new Error('AI 返回的任务清单与本地任务不一致，未修改任何数据。');
+  const proposals=tasks.map(t=>{const item=byId.get(String(t.id));return {task:t,importance:item.importance,urgent:item.urgent,reason:String(item.reason||'AI 分类建议')}});
   const summary=proposals.map(x=>'• '+x.task.name+' → '+(x.importance?(x.urgent?'重要且紧急':'重要不紧急'):(x.urgent?'不重要但紧急':'不重要不紧急'))+'（'+x.reason+'）').join('\n');
   if(!confirm('AI 已提出以下分类建议：\n\n'+summary+'\n\n确认后将更新这些任务的四象限属性。是否应用？')){status.textContent='已取消应用，原任务数据未更改。';return}
-  for(const p of proposals){p.task.importance=p.importance;p.task.urgent=p.urgent;await persist('tasks',p.task)}renderTasks();status.textContent='已应用 '+proposals.length+' 项 AI 分类建议。你仍可在任务编辑中手动修改。';toast('AI 四象限分类已应用');
+  const updated=proposals.map(p=>({...p.task,importance:p.importance,urgent:p.urgent}));await dbPutMany('tasks',updated);updated.forEach(t=>{const i=state.tasks.findIndex(x=>x.id===t.id);if(i>=0)state.tasks[i]=t});renderAll();status.textContent='已应用 '+proposals.length+' 项 AI 分类建议。你仍可在任务编辑中手动修改。';toast('AI 四象限分类已应用');
  }catch(e){status.textContent='AI 分析失败：'+(e.message||String(e));}finally{btn.disabled=!check.checked}
 }
 function renderTasks(){
@@ -412,7 +423,7 @@ function parseBlocked(){
 function selectedItems(){
  return [...document.querySelectorAll('.plan-select:checked')].map(el=>{
  let v=el.value,p=v.split(':');
- if(p[0]==='task'){let t=state.tasks.find(x=>x.id===p[1]);return t?{key:v,type:'task',refId:t.id,name:t.name,subject:t.subject,estimate:t.estimate,priority:t.priority,importance:t.importance,urgent:t.urgent,weakness:0,difficulty:1,questions:t.totalQuestions||0,pages:0}:null}
+ if(p[0]==='task'){let t=state.tasks.find(x=>x.id===p[1]);return t?{key:v,type:'task',refId:t.id,name:t.name,subject:t.subject,estimate:t.estimate,priority:t.priority,importance:t.importance,urgent:t.urgent,dueDate:t.dueDate||'',note:t.note||'',weakness:0,difficulty:1,questions:t.totalQuestions||0,pages:0}:null}
  let r=state.resources.find(x=>x.id===p[1]),c=r?.chapters.find(x=>x.id===p[2]);if(!r||!c)return null;
  let remainQ=Math.max(0,(c.totalQuestions||0)-(c.doneQuestions||0)),totalPages=Math.max(0,(c.endPage||0)-(c.startPage||0)+1),remainP=Math.max(0,totalPages-(c.donePages||0));
  if(remainQ===0&&remainP===0)return null;
@@ -433,8 +444,11 @@ async function generatePlan(){
  if($('plannerAIAssist')?.checked){const status=$('plannerAIStatus');status.textContent='AI 正在分析任务优先级与时间分配…';try{
   if(typeof window.studyFlowAIRequest!=='function')throw new Error('AI 模块尚未加载，请刷新页面。');
   const payload={items:items.map(x=>({key:x.key,name:x.name,subject:x.subject,estimate:x.estimate,priority:x.priority,importance:x.importance,urgent:x.urgent,weakness:x.weakness,difficulty:x.difficulty,questions:x.questions,pages:x.pages})),available:{saturday:$('satStart').value+'-'+$('satEnd').value,sunday:$('sunStart').value+'-'+$('sunEnd').value,lunch:$('breakStart').value+'-'+$('breakEnd').value,blocked:$('blocked').value},intensity:config.intensity,preference:config.mode};
-  const raw=await window.studyFlowAIRequest('你是学习计划规划助手。只依据提供的数据安排，优先照顾截止日期紧迫、重要和薄弱科目，同时保留休息与自由时间。只输出合法 JSON，不要 Markdown。','请为所选内容给出排序和建议学习分钟数。格式：{"items":[{"key":"原key","rank":1,"minutes":45,"reason":"简短理由"}],"advice":"一句总体建议"}。minutes建议在15至120之间，不得超过原预计时长太多。\n数据：'+JSON.stringify(payload));
-  aiAdvice=parseAIJSON(raw);(aiAdvice.items||[]).forEach(x=>{if(items.some(i=>i.key===x.key))aiRank.set(x.key,{rank:Number(x.rank)||999,minutes:Math.max(15,Math.min(120,Number(x.minutes)||45)),reason:String(x.reason||'')})});if(!aiRank.size)throw new Error('AI 返回内容没有匹配的任务排序。');status.textContent='AI 建议已生成，系统正在结合可用时间生成时间表。';
+  const raw=await window.studyFlowAIRequest('你是严谨的学习计划规划助手。只依据输入安排，重视明确截止日期、重要任务和薄弱科目；考虑周末可用时间、午休和固定活动。不得增加、删除或改名任务。只输出合法 JSON。','请为每一项所选内容给出唯一排序和建议学习分钟数。必须覆盖全部 key，rank 从 1 开始且不重复。minutes 不得超过该项原预计时间（最少按 15 分钟安排）。格式：{"items":[{"key":"原key","rank":1,"minutes":45,"reason":"简短理由"}],"advice":"一句总体建议"}。\\n数据：'+JSON.stringify(payload));
+   aiAdvice=parseAIJSON(raw);const recs=aiAdvice.items;if(!Array.isArray(recs)||recs.length!==items.length)throw new Error('AI 未覆盖全部学习内容，已改用原有排程。');
+   for(const itemAdvice of recs){const item=items.find(i=>i.key===itemAdvice.key),rank=Number(itemAdvice.rank),minutes=Number(itemAdvice.minutes);if(!item||aiRank.has(itemAdvice.key)||!Number.isInteger(rank)||rank<1||!Number.isFinite(minutes))throw new Error('AI 排程结果包含无效或重复项目，已改用原有排程。');const maxMinutes=Math.max(15,Math.min(120,Number(item.estimate)||45));aiRank.set(itemAdvice.key,{rank,minutes:Math.max(15,Math.min(maxMinutes,minutes)),reason:String(itemAdvice.reason||'')})}
+   const ranks=[...aiRank.values()].map(v=>v.rank);if(new Set(ranks).size!==ranks.length)throw new Error('AI 排序编号重复，已改用原有排程。');
+   status.textContent='AI 建议已生成，系统正在结合可用时间生成时间表。';
  }catch(e){status.textContent='AI 辅助暂不可用，已改用原有自动排程：'+e.message;aiAdvice=null;aiRank.clear()}}
  else if($('plannerAIStatus'))$('plannerAIStatus').textContent='未启用 AI，使用 STUDY FLOW 原有规则生成计划。';
  let factor={light:.65,standard:.78,focused:.9}[config.intensity],slots=[];
