@@ -54,7 +54,7 @@
     const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,unb64(envelope.data));
     return JSON.parse(new TextDecoder().decode(plain));
   }
-  async function api(path, options={}) {
+  async function api(path, options={}, allowNotFound=false) {
     const token = el('cloudToken')?.value.trim() || localStorage.getItem(TOKEN_KEY) || '';
     if (!token) throw new Error('请先填写 GitHub Fine-grained Token。');
     const response = await fetch(API+path, {
@@ -67,14 +67,14 @@
         ...(options.headers||{})
       }
     });
-    if (response.status===404) return null;
+    if (response.status===404 && allowNotFound) return null;
     const body=await response.json().catch(()=>({}));
     if (!response.ok) throw new Error(body.message || ('GitHub API 错误：'+response.status));
     return body;
   }
   async function readRemote() {
     const path='/repos/'+OWNER+'/'+REPO+'/contents/'+FILE_PATH.split('/').map(encodeURIComponent).join('/');
-    const result=await api(path+'?ref='+encodeURIComponent(BRANCH));
+    const result=await api(path+'?ref='+encodeURIComponent(BRANCH),{},true);
     if (!result) return null;
     const content=(result.content||'').replace(/\n/g,'');
     return {sha:result.sha,envelope:JSON.parse(fromB64(content))};
@@ -106,11 +106,17 @@
       req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error);
     });
     try {
-      for (const store of STORES) await new Promise((resolve,reject)=>{
-        const tx=db.transaction(store,'readwrite'), os=tx.objectStore(store);
-        os.clear();
-        for (const item of (Array.isArray(data[store])?data[store]:[])) os.put(item);
-        tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+      // Replace every store in one IndexedDB transaction: either all stores update, or none do.
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction(STORES,'readwrite');
+        for (const store of STORES) {
+          const os=tx.objectStore(store);
+          os.clear();
+          for (const item of (Array.isArray(data[store])?data[store]:[])) os.put(item);
+        }
+        tx.oncomplete=resolve;
+        tx.onerror=()=>reject(tx.error || new Error('本地数据写入失败。'));
+        tx.onabort=()=>reject(tx.error || new Error('本地数据替换已取消，原数据未完成替换。'));
       });
     } finally { db.close(); }
     location.reload();
