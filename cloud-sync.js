@@ -6,7 +6,7 @@
   'use strict';
   const OWNER = 'ez2009';
   const REPO = 'study-flow';
-  const BRANCH = 'feature/github-cloud-sync';
+  const BRANCH = 'study-flow-data';
   const FILE_PATH = '.study-flow/cloud-data.enc';
   const API = 'https://api.github.com';
   const STORES = ['resources','tasks','plans','sessions','reviews','settings'];
