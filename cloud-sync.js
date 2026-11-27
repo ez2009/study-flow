@@ -68,8 +68,11 @@
       }
     });
     if (response.status===404 && allowNotFound) return null;
-    const body=await response.json().catch(()=>({}));
-    if (!response.ok) throw new Error(body.message || ('GitHub API 错误：'+response.status));
+    const raw=await response.text();
+    let body={};
+    if(raw.trim()){try{body=JSON.parse(raw)}catch{body={message:raw.slice(0,240)}}}
+    if (!response.ok) throw new Error('GitHub API 请求失败（HTTP '+response.status+'）：'+(body?.message||'未提供错误详情')+(response.headers.get('x-github-request-id')?' · Request ID '+response.headers.get('x-github-request-id'):''));
+    if(body===null) throw new Error('GitHub API 返回了空值（HTTP '+response.status+'）。请检查 Token 权限和数据分支；如果问题持续，请把此状态及 Request ID 发给我。'+(response.headers.get('x-github-request-id')?' Request ID '+response.headers.get('x-github-request-id'):''));
     return body;
   }
   async function readRemote() {
