@@ -45,17 +45,20 @@
   function loadChat(){try{messages=JSON.parse(localStorage.getItem(CHAT)||'[]').slice(-30)}catch{messages=[]}renderChat();}
   function saveChat(){localStorage.setItem(CHAT,JSON.stringify(messages.slice(-30)))}
   function renderChat(){const box=$('aiMessages');if(!box)return;box.innerHTML='';if(!messages.length){const intro=document.createElement('div');intro.className='ai-message assistant';intro.textContent='你好！我是 STUDY FLOW 助手。你可以让我帮你拆分任务、规划周末学习时间，或复盘学习进度。';box.appendChild(intro)}messages.forEach(m=>{const el=document.createElement('div');el.className='ai-message '+(m.role==='user'?'user':'assistant');el.textContent=m.content;box.appendChild(el)});box.scrollTop=box.scrollHeight;}
-  async function callAPI(history){
+  async function callAPI(history,maxTokens=1400){
     const c=readConfig(),key=getKey();if(!key)throw new Error('还没有 API Key。请先到「设置与工具 → AI 配置」填写。');
     const body={model:c.model,messages:history,stream:false};
-    if(c.provider==='deepseek'){body.max_tokens=1400;body.thinking={type:'disabled'}}else{body.max_completion_tokens=1400;}
-    const res=await fetch(endpoint(),{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)});
-    let data;try{data=await res.json()}catch{throw new Error('服务商返回了无法识别的响应。')}
+    if(c.provider==='deepseek'){body.max_tokens=maxTokens;body.thinking={type:'disabled'}}else{body.max_completion_tokens=maxTokens;}
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),45000);let res,data;
+    try{res=await fetch(endpoint(),{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body),signal:controller.signal});const raw=await res.text();try{data=raw?JSON.parse(raw):{}}catch{throw new Error('服务商返回了非 JSON 内容（HTTP '+res.status+'）。请检查 API 地址和模型。')}}
+    catch(e){if(e.name==='AbortError')throw new Error('AI 请求超过 45 秒，已自动停止。可以减少所选任务后重试。');if(e instanceof TypeError)throw new Error('无法连接 AI 服务。请检查网络、API 地址和浏览器跨域（CORS）限制。');throw e}
+    finally{clearTimeout(timeout)}
     if(!res.ok)throw new Error(data?.error?.message||data?.message||('请求失败，HTTP '+res.status));
-    const content=data?.choices?.[0]?.message?.content;
-    if(typeof content==='string')return content;
-    if(Array.isArray(content))return content.map(x=>x.text||'').join('\n');
-    throw new Error('接口返回成功，但没有找到回复内容。');
+    const message=data?.choices?.[0]?.message,content=message?.content;
+    if(typeof content==='string'&&content.trim())return content;
+    if(Array.isArray(content)){const joined=content.map(x=>x.text||'').join('\\n').trim();if(joined)return joined;}
+    if(message?.refusal)throw new Error('模型拒绝了本次请求：'+message.refusal);
+    throw new Error('接口返回成功，但没有找到有效回复内容。');
   }
   async function send(text){
     if(busy)return;const input=$('aiInput');const value=(text??input?.value??'').trim();if(!value)return;
@@ -70,7 +73,7 @@
   }
   async function requestForPlanner(systemPrompt,userPrompt){
     if(!getKey())throw new Error('请先到「设置与工具 → AI 配置」填写 API Key。');
-    return callAPI([{role:'system',content:systemPrompt},{role:'user',content:userPrompt}]);
+    return callAPI([{role:'system',content:systemPrompt},{role:'user',content:userPrompt}],3000);
   }
   async function testConnection(){if(!saveConfig())return;const key=getKey();if(!key){setStatus('请先填写 API Key。',true);return}setStatus('正在测试连接…');try{const answer=await callAPI([{role:'user',content:'请只回复：连接成功'}]);setStatus('连接成功：'+answer.slice(0,80));}catch(e){setStatus('连接失败：'+e.message,true)}}
   function clearChat(){if(!confirm('确定清空 AI 对话历史？'))return;messages=[];saveChat();renderChat()}
