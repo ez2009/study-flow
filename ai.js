@@ -35,7 +35,7 @@
   function contextText(){
     if(!$('aiIncludeContext')?.checked)return '';
     try{
-      const tasks=(state?.tasks||[]).slice(0,35).map(t=>({title:t.name,subject:t.subject||'',status:t.status==='done'?'已完成':'待完成',importance:!!t.importance,urgent:!!t.urgent,due:t.dueDate||''}));
+      const tasks=(state?.tasks||[]).slice(0,60).map(t=>({id:t.id,title:t.name,note:t.note||'',subject:t.subject||'',estimate:t.estimate||45,status:t.status==='done'?'已完成':'待完成',importance:!!t.importance,urgent:!!t.urgent,due:t.dueDate||''}));
       const resources=(state?.resources||[]).slice(0,15).map(r=>({name:r.name,subject:r.subject,chapters:(r.chapters||[]).slice(0,12).map(c=>({name:c.name,pages:c.pages,questions:c.questions}))}));
       const plan=(state?.plans||[]).slice(-1)[0];
       const planSummary=plan?{dates:plan.dates,items:(plan.items||[]).slice(0,20).map(x=>({day:x.day,name:x.itemName,start:x.start,end:x.end,status:x.status}))}:null;
@@ -77,7 +77,7 @@
           if(parsed.weekendConfig&&typeof parsed.weekendConfig==='object'){
             if(typeof window.studyFlowConfigureWeekend!=='function')throw new Error('周末计划配置模块尚未加载');
             const ok=await window.studyFlowConfigureWeekend(parsed.weekendConfig);
-            visible+='\\n\\n已根据你的要求配置周末计划并调用生成器。请检查页面中的时间表；若有未安排任务，可继续让我调整。';
+            visible+=(ok?'\n\n已根据你的要求配置并生成周末计划。请检查时间表；若有未安排任务，可以继续让我调整。':'\n\n已配置周末计划参数，但生成器未能生成新计划。请查看周末计划页面的提示信息。');
           }
         }
       }catch(e){if(e instanceof SyntaxError){/* 兼容模型未按结构化格式回复的普通文本 */}else throw e}
