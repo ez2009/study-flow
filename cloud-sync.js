@@ -129,6 +129,7 @@
   }
   async function downloadRemote(remote,password) {
     const data=await decryptData(remote.envelope,password);
+    setBaseline(remote.sha,fingerprint(data));
     await replaceLocal(data);
   }
   async function syncNow(mode='normal') {
