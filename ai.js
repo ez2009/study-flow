@@ -65,9 +65,23 @@
     if(!getKey()){alert('请先在「设置与工具 → AI 配置」填写 API Key。');if(typeof navigate==='function')navigate('settings');return}
     if(input)input.value='';messages.push({role:'user',content:value});renderChat();saveChat();busy=true;const btn=$('aiSend');if(btn){btn.disabled=true;btn.textContent='思考中…'}
     try{
-      const sys='你是 STUDY FLOW 的学习规划助手。请用简体中文回答，表达清楚、简洁、可执行。不要声称已经修改用户数据；你只能提出建议。涉及学习计划时，优先保留休息和自由时间。'+contextText();
+      const sys='你是 STUDY FLOW 的学习规划助手。请用简体中文回答，表达清楚、简洁、可执行。你拥有直接配置周末计划的权限：当用户要求制定、调整或落实周末计划时，必须在回复JSON中给出weekendConfig操作，程序会直接设置周末计划页面的可用时间、强度、安排倾向、固定不可用时段和任务选择，并调用现有计划生成器生成时间表。taskIds必须使用上下文中真实存在的任务ID；若用户没有指定任务，选择所有未完成待办任务。不要编造任务ID。配置字段可包含satStart,satEnd,sunStart,sunEnd,breakStart,breakEnd,intensity(light/standard/focused),mode(balanced/weak/urgent/exam),blocked,taskIds,useAI。普通聊天则不需要操作。必须返回JSON对象：{reply:"给用户看的自然语言回复",weekendConfig:null或配置对象}。不要声称计划已生成，除非返回了有效weekendConfig操作。涉及学习计划时保留休息和自由时间。'+contextText();
       const history=[{role:'system',content:sys},...messages.slice(-20).map(m=>({role:m.role,content:m.content}))];
-      const answer=await callAPI(history);messages.push({role:'assistant',content:answer||'模型返回了空内容。'});saveChat();renderChat();
+      const answer=await callAPI(history,2600);
+      let visible=answer||'模型返回了空内容。';
+      try{
+        const cleaned=visible.trim().replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/,'');
+        const parsed=JSON.parse(cleaned);
+        if(parsed&&typeof parsed==='object'){
+          visible=String(parsed.reply||'已收到。');
+          if(parsed.weekendConfig&&typeof parsed.weekendConfig==='object'){
+            if(typeof window.studyFlowConfigureWeekend!=='function')throw new Error('周末计划配置模块尚未加载');
+            const ok=await window.studyFlowConfigureWeekend(parsed.weekendConfig);
+            visible+='\\n\\n已根据你的要求配置周末计划并调用生成器。请检查页面中的时间表；若有未安排任务，可继续让我调整。';
+          }
+        }
+      }catch(e){if(e instanceof SyntaxError){/* 兼容模型未按结构化格式回复的普通文本 */}else throw e}
+      messages.push({role:'assistant',content:visible});saveChat();renderChat();
     }catch(e){messages.push({role:'assistant',content:'请求失败：'+(e.message||String(e))+'\n\n如果你使用 GitHub Pages，请确认服务商允许浏览器跨域请求（CORS）。如果浏览器报告 CORS 错误，纯静态前端无法绕过，需要改用可信代理服务。'});saveChat();renderChat()}
     finally{busy=false;if(btn){btn.disabled=false;btn.textContent='发送'}updateAIStatus()}
   }
