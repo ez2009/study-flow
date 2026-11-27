@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f7f8fa" id="metaThemeColor">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="STUDY FLOW">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>STUDY FLOW · Personal Study System</title>
+<style>
+:root{
+ --bg:#f5f7fa;--surface:#fff;--surface-2:#f0f3f7;--text:#202b38;--muted:#7b8794;
+ --line:#e5eaf0;--primary:#376f9f;--primary-2:#e8f1f9;--nav:#172536;--nav-muted:#aab8c8;
+ --green:#27845f;--green-bg:#e8f5ef;--orange:#b77925;--orange-bg:#fff4e2;
+ --red:#b94b43;--red-bg:#fcecea;--shadow:0 8px 28px rgba(25,45,65,.06);--radius:15px
+}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+.app{min-height:100vh}.sidebar{position:fixed;inset:0 auto 0 0;width:238px;background:var(--nav);color:#fff;padding:25px 15px;display:flex;flex-direction:column;z-index:20}
+.brand{display:flex;align-items:center;gap:11px;padding:0 10px 28px}.brand-mark{width:36px;height:36px;border-radius:11px;background:#315d80;display:grid;place-items:center;font-weight:800;font-size:18px}.brand-name{font-size:17px;font-weight:800;letter-spacing:1.2px}.brand-sub{font-size:10px;color:var(--nav-muted);letter-spacing:1.4px}
+.nav-label{font-size:10px;color:#718399;padding:12px 12px 7px;letter-spacing:1.3px}.nav-btn{border:0;background:transparent;color:var(--nav-muted);width:100%;padding:11px 12px;border-radius:10px;text-align:left;display:flex;align-items:center;gap:12px;margin:2px 0;font-size:13px}.nav-btn:hover,.nav-btn.active{background:#293d52;color:#fff}.nav-icon{width:19px;text-align:center;font-size:16px}.sidebar-bottom{margin-top:auto;padding:14px 11px;color:#8fa0b2;font-size:11px;border-top:1px solid #2b3b4d}
+.main{margin-left:238px;min-height:100vh}.topbar{height:68px;background:rgba(255,255,255,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 34px;position:sticky;top:0;z-index:10}.top-title{font-size:14px;font-weight:700}.top-right{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px}.avatar{width:31px;height:31px;border-radius:50%;background:var(--primary-2);color:var(--primary);display:grid;place-items:center;font-weight:700}
+.content{max-width:1320px;margin:auto;padding:30px 34px 60px}.page{display:none}.page.active{display:block}.page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px}.eyebrow{font-size:11px;color:var(--primary);font-weight:700;letter-spacing:1.5px;text-transform:uppercase}.page h1{font-size:25px;margin:4px 0 5px;letter-spacing:-.5px}.sub{color:var(--muted);font-size:13px}.btn{border:1px solid var(--line);background:#fff;color:var(--text);padding:9px 14px;border-radius:9px;font-weight:600;font-size:12px;display:inline-flex;align-items:center;justify-content:center;gap:7px}.btn:hover{border-color:#b7c9d9;background:#fafdff}.btn.primary{background:var(--primary);border-color:var(--primary);color:white}.btn.primary:hover{background:#2c608d}.btn.soft{background:var(--primary-2);border-color:var(--primary-2);color:var(--primary)}.btn.danger{color:var(--red);background:var(--red-bg);border-color:var(--red-bg)}.btn.small{padding:6px 9px;font-size:11px}.btn:disabled{opacity:.45;cursor:not-allowed}
+.grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:18px}.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}.stat{display:flex;justify-content:space-between;gap:10px}.stat-label{font-size:12px;color:var(--muted)}.stat-value{font-size:27px;font-weight:750;margin-top:7px;letter-spacing:-.8px}.stat-note{font-size:11px;color:var(--muted);margin-top:2px}.stat-icon{width:36px;height:36px;border-radius:11px;background:var(--primary-2);color:var(--primary);display:grid;place-items:center;font-size:17px}
+.two-col{grid-template-columns:1.35fr 1fr}.section-title{font-size:14px;font-weight:750;margin:0 0 14px;display:flex;justify-content:space-between;align-items:center}.section-title small{font-size:11px;color:var(--muted);font-weight:400}.empty{padding:30px 15px;text-align:center;color:var(--muted);font-size:12px}.empty .empty-icon{font-size:26px;margin-bottom:8px}
+.task-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line)}.task-row:last-child{border-bottom:0}.check{width:17px;height:17px;accent-color:var(--green);flex-shrink:0}.task-main{min-width:0;flex:1}.task-name{font-weight:650;font-size:12px}.task-meta{font-size:11px;color:var(--muted);margin-top:2px}.tag{display:inline-flex;align-items:center;border-radius:20px;padding:3px 8px;font-size:10px;font-weight:650;background:var(--surface-2);color:#637080;white-space:nowrap}.tag.blue{background:var(--primary-2);color:var(--primary)}.tag.green{background:var(--green-bg);color:var(--green)}.tag.orange{background:var(--orange-bg);color:var(--orange)}.tag.red{background:var(--red-bg);color:var(--red)}
+.progress{height:7px;border-radius:20px;background:#edf0f4;overflow:hidden}.progress>span{display:block;height:100%;background:#4c91c5;border-radius:20px}.progress.green>span{background:#36a078}
+.quick-grid{grid-template-columns:repeat(4,1fr)}.quick{padding:15px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:left}.quick:hover{border-color:#a9c3d9;transform:translateY(-1px)}.quick-icon{font-size:20px;margin-bottom:8px}.quick strong{display:block;font-size:12px}.quick span{font-size:10px;color:var(--muted)}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:16px}.field{display:flex;flex-direction:column;gap:5px;margin-bottom:13px;min-width:0}.field label{font-size:11px;font-weight:700;color:#596777}.field input,.field select,.field textarea,.toolbar input,.toolbar select{width:100%;border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 10px;outline:none;color:var(--text);min-width:0}.field input:focus,.field select:focus,.field textarea:focus,.toolbar input:focus,.toolbar select:focus{border-color:#76a4c8;box-shadow:0 0 0 3px #eaf3fa}.field textarea{resize:vertical;min-height:70px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 13px}.form-grid .full{grid-column:1/-1}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}.data-table{border-collapse:collapse;width:100%;min-width:650px}.data-table th{text-align:left;background:#f8fafc;color:#748190;font-size:10px;font-weight:700;letter-spacing:.3px;padding:12px 14px}.data-table td{padding:12px 14px;border-top:1px solid var(--line);font-size:12px}.data-table tr:hover td{background:#fcfdff}.actions{display:flex;gap:6px;flex-wrap:wrap}.muted{color:var(--muted)}.subject-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;background:#5794c4}
+.quad-grid{grid-template-columns:1fr 1fr}.quad{border-radius:13px;padding:15px;min-height:150px}.quad h3{font-size:12px;margin:0 0 4px}.quad p{font-size:10px;margin:0 0 10px;opacity:.8}.quad.q1{background:#fbecea;color:#a84b43}.quad.q2{background:#e9f2fb;color:#376f9f}.quad.q3{background:#fff4e2;color:#a16d25}.quad.q4{background:#eef0f3;color:#697481}.quad-item{background:rgba(255,255,255,.72);padding:7px 9px;border-radius:7px;margin-top:6px;font-size:11px;color:#394653}
+.day-columns{display:grid;grid-template-columns:1fr 1fr;gap:15px}.day-card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:16px;min-width:0}.day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.day-head strong{font-size:14px}.slot{display:grid;grid-template-columns:78px 1fr;gap:10px;padding:9px 0;border-top:1px solid var(--line)}.slot-time{font-size:10px;color:var(--muted);padding-top:2px}.slot-body{border-left:3px solid #6b9fc7;padding:2px 0 3px 10px;min-width:0}.slot-body.break{border-color:#c6cdd5}.slot-body.done{border-color:#46a47e}.slot-title{font-size:12px;font-weight:700}.slot-meta{font-size:10px;color:var(--muted);margin-top:2px}.slot-actions{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.modal-backdrop{position:fixed;inset:0;background:rgba(15,28,42,.42);z-index:50;display:none;align-items:center;justify-content:center;padding:18px}.modal-backdrop.show{display:flex}.modal{width:min(590px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:17px;padding:22px;box-shadow:0 25px 80px rgba(0,0,0,.2)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:17px}.modal-head h2{font-size:17px;margin:0}.close{border:0;background:var(--surface-2);width:30px;height:30px;border-radius:8px;font-size:18px;color:#687585}
+.toast{position:fixed;bottom:24px;right:24px;background:#1f3448;color:white;padding:11px 16px;border-radius:10px;box-shadow:var(--shadow);font-size:12px;z-index:100;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:translateY(0)}
+.mobile-menu{display:none}.mobile-nav{display:none}.pill-tabs{display:flex;gap:6px;flex-wrap:wrap}.pill-tabs button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:7px 12px;font-size:11px;color:var(--muted)}.pill-tabs button.active{background:var(--primary-2);color:var(--primary);border-color:#d5e5f1}
+.review-box{background:#f6f9fc;border:1px solid #e5edf4;padding:14px;border-radius:11px;font-size:12px;line-height:1.8}
+@media(max-width:1050px){.stats{grid-template-columns:repeat(2,1fr)}.quick-grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}}
+@media(max-width:700px){
+ .sidebar{display:none}.main{margin-left:0;padding-bottom:70px}.topbar{height:58px;padding:0 17px}.content{padding:22px 15px 35px}.page h1{font-size:22px}.page-head{margin-bottom:18px}.page-head>.btn{align-self:center}.top-right .date-text{display:none}
+ .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:62px;background:#fff;border-top:1px solid var(--line);z-index:30;justify-content:space-around;padding-bottom:env(safe-area-inset-bottom)}.mobile-nav button{border:0;background:transparent;color:#82909e;font-size:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;flex:1}.mobile-nav button.active{color:var(--primary);font-weight:700}.mobile-nav span{font-size:18px}
+ .stats{gap:10px}.card{padding:14px}.stat-value{font-size:23px}.two-col,.day-columns,.quad-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}.toolbar>*{flex:1}.toolbar .btn{flex:0 0 auto}.day-card{padding:13px}.slot{grid-template-columns:67px 1fr}.modal{padding:17px}
+}
+
+/* ===== STUDY FLOW · 简洁界面调整（不改动原有功能逻辑） ===== */
+:root{--bg:#f7f8fa;--surface:#fff;--surface-2:#f2f4f7;--text:#202a35;--muted:#7c8793;--primary:#426f91;--primary-2:#edf3f7;--line:#e9edf1;--radius:13px;--shadow:0 3px 14px rgba(25,45,65,.035)}
+.sidebar{width:218px;padding:25px 14px}.main{margin-left:218px}.brand{padding-bottom:25px}.brand-mark{background:#426f91}.brand-name{letter-spacing:.8px}.nav-label{padding-top:17px;padding-bottom:6px;color:#8293a5}.nav-btn{padding:10px 12px;font-size:13px;border-radius:9px}.nav-btn.active{background:#2b4054}.sidebar-bottom{font-size:11px;line-height:1.8}.topbar{padding:0 32px}.content{max-width:1180px;padding:30px 32px 55px}.page-head{margin-bottom:20px}.page h1{font-size:24px;font-weight:720}.eyebrow{font-size:10px;letter-spacing:1.2px}.sub{line-height:1.65}.btn{padding:9px 13px;border-radius:8px}.card{box-shadow:none;padding:18px;border-radius:13px}.section-title{font-size:13px;margin-bottom:12px}.stats{gap:11px}.stat-value{font-size:24px}.quick-grid{gap:10px}.quick{padding:13px;border-radius:10px;box-shadow:none}.quick-icon{margin-bottom:5px}.quad{min-height:125px}.modal{border-radius:14px}
+.home-head{align-items:center}.home-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 16px}.home-stat{background:#fff;border:1px solid var(--line);border-radius:11px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:8px}.home-stat span{font-size:12px;color:var(--muted)}.home-stat strong{font-size:23px;line-height:1.2;font-weight:750;color:var(--text)}.home-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:17px}.home-action{display:flex;align-items:center;gap:11px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:11px;padding:14px 15px;color:var(--text);min-width:0}.home-action:hover{border-color:#b7c9d9;background:#fbfdff}.home-action.featured{background:#edf3f7;border-color:#e1ebf2}.home-action-icon{width:34px;height:34px;flex:0 0 34px;border-radius:9px;background:#f0f3f6;color:var(--primary);display:grid;place-items:center;font-size:18px}.featured .home-action-icon{background:#fff}.home-action b{display:block;font-size:12px}.home-action small{display:block;font-size:10px;color:var(--muted);margin-top:3px}.home-arrow{margin-left:auto;color:#91a0ad;font-size:20px}.home-lower{gap:14px}.home-lower .card{min-height:180px}.text-link{border:0;background:none;padding:8px 0 0;color:var(--primary);font-size:11px;font-weight:650;cursor:pointer}.home-footer{display:flex;gap:22px;flex-wrap:wrap;margin-top:8px}.advanced-options{border-top:1px solid var(--line);padding-top:12px;margin-top:5px}.advanced-options summary{font-size:11px;color:var(--primary);cursor:pointer;font-weight:650;margin-bottom:12px}.advanced-options:not([open]) summary{margin-bottom:0}
+@media(max-width:1050px){.home-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.home-actions{grid-template-columns:1fr}.home-action{padding:12px 14px}}
+@media(max-width:700px){.sidebar{display:none}.main{margin-left:0}.content{padding:20px 14px 30px}.home-head{align-items:flex-start}.home-head .btn{white-space:nowrap;padding:8px 10px;font-size:11px}.home-stats{gap:8px}.home-stat{padding:11px 12px}.home-stat strong{font-size:21px}.home-actions{gap:8px}.home-action{padding:11px 12px}.home-lower{grid-template-columns:1fr}.home-footer{gap:12px 18px}.topbar{padding:0 15px}.page-head{gap:10px}.page h1{font-size:21px}}
+
+
+/* ===== V2: Theme system ===== */
+:root{color-scheme:light;}
+html[data-theme="dark"]{color-scheme:dark;--bg:#111821;--surface:#1a2430;--surface-2:#222e3b;--text:#e6edf4;--muted:#9aa8b7;--line:#2c3948;--primary:#83b6df;--primary-2:#263b4d;--nav:#101923;--green-bg:#1c3a30;--orange-bg:#423421;--red-bg:#432b2a;--shadow:0 4px 18px rgba(0,0,0,.18)}
+html[data-theme="dark"] body{background:var(--bg);color:var(--text)}
+html[data-theme="dark"] .topbar{background:rgba(26,36,48,.92);border-color:var(--line)}
+html[data-theme="dark"] .card,html[data-theme="dark"] .home-stat,html[data-theme="dark"] .home-action,html[data-theme="dark"] .day-card,html[data-theme="dark"] .table-wrap,html[data-theme="dark"] .modal{background:var(--surface);border-color:var(--line);color:var(--text)}
+html[data-theme="dark"] .btn,html[data-theme="dark"] .field input,html[data-theme="dark"] .field select,html[data-theme="dark"] .field textarea,html[data-theme="dark"] .toolbar input,html[data-theme="dark"] .toolbar select,html[data-theme="dark"] .pill-tabs button{background:var(--surface-2);border-color:var(--line);color:var(--text)}
+html[data-theme="dark"] .btn.primary{background:#386b91;border-color:#386b91;color:#fff}
+html[data-theme="dark"] .btn.soft,html[data-theme="dark"] .home-action.featured{background:#263b4d;border-color:#344c60;color:#d7e8f5}
+html[data-theme="dark"] .home-action-icon,html[data-theme="dark"] .stat-icon{background:#2a4053;color:#a9d2f2}
+html[data-theme="dark"] .data-table th{background:#202c39;color:#aab8c6}
+html[data-theme="dark"] .data-table td,html[data-theme="dark"] .task-row,html[data-theme="dark"] .slot{border-color:var(--line)}
+html[data-theme="dark"] .data-table tr:hover td{background:#202c39}
+html[data-theme="dark"] .quad-item{background:rgba(25,35,46,.82);color:var(--text)}
+html[data-theme="dark"] .quad.q1{background:#432d2c;color:#f0b2ac}html[data-theme="dark"] .quad.q2{background:#263b4d;color:#acd2f0}html[data-theme="dark"] .quad.q3{background:#443722;color:#e8c58e}html[data-theme="dark"] .quad.q4{background:#2b3540;color:#c3cbd4}
+html[data-theme="dark"] .review-box{background:#202c39;border-color:var(--line);color:var(--text)}
+html[data-theme="dark"] .progress{background:#303d4b}
+html[data-theme="dark"] .close{background:#2b3948;color:#dce6ef}
+html[data-theme="dark"] .mobile-nav{background:rgba(26,36,48,.96);border-color:var(--line)}
+html[data-theme="dark"] .mobile-nav button{color:#aebdcb}html[data-theme="dark"] .mobile-nav button.active{color:#a9d2f2}
+.theme-toggle{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:9px;width:36px;height:36px;display:grid;place-items:center;font-size:16px}
+.ai-layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:15px;align-items:start}.ai-chat{min-height:480px;display:flex;flex-direction:column}.ai-messages{flex:1;min-height:320px;max-height:58vh;overflow:auto;padding:4px 2px 14px}.ai-message{max-width:88%;padding:11px 13px;border-radius:13px;margin:9px 0;font-size:13px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}.ai-message.user{margin-left:auto;background:var(--primary-2);color:var(--text)}.ai-message.assistant{background:var(--surface-2);color:var(--text)}.ai-composer{display:flex;gap:8px;align-items:flex-end;border-top:1px solid var(--line);padding-top:12px}.ai-composer textarea{flex:1;min-height:44px;max-height:140px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface);color:var(--text)}.ai-hint{font-size:11px;color:var(--muted);line-height:1.6}.ai-chip{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:20px;padding:7px 10px;font-size:11px}.settings-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.settings-row:last-child{border-bottom:0}
+@media(max-width:800px){.ai-layout{grid-template-columns:1fr}.ai-side{order:-1}.ai-chat{min-height:430px}.ai-messages{max-height:48vh}}
+
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+ <div class="brand"><div class="brand-mark">S</div><div><div class="brand-name">STUDY FLOW</div><div class="brand-sub">学习安排，一目了然</div></div></div>
+ <div class="nav-label">工作台</div>
+ <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">⌂</span>首页</button>
+ <button class="nav-btn" data-page="tasks"><span class="nav-icon">☷</span>任务</button>
+ <button class="nav-btn" data-page="planner"><span class="nav-icon">▦</span>周末计划</button>
+ <button class="nav-btn" data-page="ai"><span class="nav-icon">✦</span>AI 助手</button>
+ <div class="nav-label">其他</div>
+ <button class="nav-btn" data-page="settings"><span class="nav-icon">⚙</span>设置与工具</button>
+ <div class="sidebar-bottom">STUDY FLOW<br>按自己的节奏，稳步完成。</div>
+</aside>
+<main class="main">
+ <header class="topbar"><div class="top-title" id="topTitle">首页</div><div class="top-right"><span class="date-text" id="todayText"></span><button class="theme-toggle" id="themeToggle" type="button" aria-label="切换主题" title="切换日夜模式">☾</button><div class="avatar">S</div></div></header>
+ <div class="content">
+  <section class="page active" id="page-dashboard">
+   <div class="page-head home-head"><div><div class="eyebrow">STUDY FLOW</div><h1 id="greeting">今天先完成一件重要的事。</h1><div class="sub">把要做的事放在这里，按自己的节奏慢慢完成。</div></div><button class="btn primary" onclick="openTaskModal()">＋ 添加任务</button></div>
+   <div class="home-stats">
+    <div class="home-stat"><span>待完成</span><strong id="stat-pending">0</strong></div>
+    <div class="home-stat"><span>已完成</span><strong id="stat-done">0</strong></div>
+    <div class="home-stat"><span>学习资料</span><strong id="stat-books">0</strong></div>
+    <div class="home-stat"><span>累计学习</span><strong id="stat-hours">0h</strong></div>
+   </div>
+   <div class="home-actions">
+    <button class="home-action" onclick="openTaskModal()"><span class="home-action-icon">＋</span><span><b>添加待办</b><small>记下要完成的事情</small></span><span class="home-arrow">›</span></button>
+    <button class="home-action" onclick="openResourceModal()"><span class="home-action-icon">▤</span><span><b>添加学习资料</b><small>录入教辅和章节</small></span><span class="home-arrow">›</span></button>
+    <button class="home-action featured" onclick="navigatePlanner()"><span class="home-action-icon">▦</span><span><b>安排周末计划</b><small>选择任务，生成时间表</small></span><span class="home-arrow">›</span></button>
+   </div>
+   <div class="grid two-col home-lower">
+    <div class="card"><div class="section-title">接下来要做 <small id="todayTaskCount">优先处理</small></div><div id="dashboardTasks"></div><button class="text-link" onclick="navigate('tasks')">查看全部任务 →</button></div>
+    <div class="card"><div class="section-title">本周末安排 <small id="weekendLabel"></small></div><div id="dashboardPlan"></div></div>
+   </div>
+   <div class="home-footer"><button class="text-link" onclick="navigate('session')">◷ 开始学习</button><button class="text-link" onclick="navigate('review')">查看学习复盘 →</button><button class="text-link" onclick="navigate('settings')">数据备份与设置 →</button></div>
+  </section>
+
+  <section class="page" id="page-library">
+   <div class="page-head"><div><div class="eyebrow">MY MATERIALS</div><h1>我的学习资料</h1><div class="sub">添加教辅资料，再把要学习的章节加入周末计划。</div></div><button class="btn primary" onclick="openResourceModal()">＋ 添加资料</button></div>
+   <div class="toolbar"><input id="librarySearch" placeholder="搜索资料名称或章节…" oninput="renderLibrary()" style="max-width:300px"><select id="librarySubject" onchange="renderLibrary()" style="max-width:150px"><option value="">全部科目</option></select></div>
+   <div id="libraryList"></div>
+  </section>
+
+  <section class="page" id="page-tasks">
+   <div class="page-head"><div><div class="eyebrow">TO-DO LIST</div><h1>待办任务</h1><div class="sub">把作业和其他要做的事记下来，设置优先级。</div></div><button class="btn primary" onclick="openTaskModal()">＋ 新建任务</button></div>
+   <div class="toolbar"><div class="pill-tabs" id="taskTabs"><button class="active" data-filter="all">全部任务</button><button data-filter="pending">待完成</button><button data-filter="done">已完成</button></div></div>
+   <div class="grid quad-grid" id="quadrants"></div>
+   <div style="height:16px"></div><div class="card"><div class="section-title">任务列表 <small id="taskCount"></small></div><div id="taskTable"></div></div>
+  </section>
+
+  <section class="page" id="page-planner">
+   <div class="page-head"><div><div class="eyebrow">WEEKEND PLAN</div><h1>安排周末</h1><div class="sub">选好要做的任务和可用时间，生成后还可以自己调整。</div></div><button class="btn primary" onclick="generatePlan()">✦ 自动生成计划</button></div>
+   <div class="grid two-col">
+    <div class="card">
+     <div class="section-title">01 · 周末可用时间 <small>只安排星期六、星期日</small></div>
+     <div class="form-grid">
+      <div class="field"><label>星期六开始</label><input type="time" id="satStart" value="09:00"></div>
+      <div class="field"><label>星期六结束</label><input type="time" id="satEnd" value="17:00"></div>
+      <div class="field"><label>星期日开始</label><input type="time" id="sunStart" value="09:00"></div>
+      <div class="field"><label>星期日结束</label><input type="time" id="sunEnd" value="17:00"></div>
+      <div class="field"><label>午间休息开始</label><input type="time" id="breakStart" value="12:00"></div>
+      <div class="field"><label>午间休息结束</label><input type="time" id="breakEnd" value="14:00"></div>
+     </div>
+     <details class="advanced-options"><summary>更多安排选项（可不设置）</summary>
+      <div class="field"><label>学习强度</label><select id="intensity"><option value="light">轻松 · 更多自由时间</option><option value="standard" selected>标准 · 均衡安排</option><option value="focused">集中 · 较高学习量</option></select></div>
+      <div class="field"><label>安排倾向</label><select id="planMode"><option value="balanced">均衡安排</option><option value="weak">薄弱科目优先</option><option value="urgent">重要紧急优先</option><option value="exam">考试复习优先</option></select></div>
+      <div class="field"><label>固定活动 / 不可安排时段（可选）</label><textarea id="blocked" placeholder="例如：星期六 15:00-16:00 篮球"></textarea></div>
+     </details>
+    </div>
+    <div class="card">
+     <div class="section-title">02 · 选择本周学习内容 <small>勾选章节或待办任务</small></div>
+     <div id="plannerChoices"></div>
+     <div style="height:12px"></div>
+     <div class="section-title">03 · 计划原则</div>
+     <div class="review-box">系统会优先安排重要、紧急或薄弱科目任务；尽量交替安排高强度与低强度内容；保留自由时间和任务间隔。预计时间仅为初始估算，你可以在生成后手动调整。</div>
+    </div>
+   </div>
+   <div style="height:18px"></div>
+   <div class="card"><div class="section-title">生成的周末时间表 <small id="planSummary">尚未生成</small><div class="actions"><button class="btn small" onclick="generatePlan()">重新生成</button><button class="btn small soft" onclick="savePlan()">保存计划</button></div></div><div id="planOutput"><div class="empty"><div class="empty-icon">▦</div>选择学习内容后，点击「自动生成计划」。</div></div></div>
+  </section>
+
+  <section class="page" id="page-session">
+   <div class="page-head"><div><div class="eyebrow">FOCUS</div><h1>开始学习</h1><div class="sub">选择一项任务，开始计时并记录完成进度。</div></div></div>
+   <div class="grid two-col">
+    <div class="card"><div class="section-title">当前任务 <small id="sessionStatus">准备开始</small></div><div id="currentTask"></div></div>
+    <div class="card"><div class="section-title">今日安排 <small>来自已保存计划</small></div><div id="sessionAgenda"></div></div>
+   </div>
+   <div style="height:16px"></div><div class="card"><div class="section-title">所有未完成任务</div><div id="sessionTasks"></div></div>
+  </section>
+
+  <section class="page" id="page-review">
+   <div class="page-head"><div><div class="eyebrow">REVIEW</div><h1>学习复盘</h1><div class="sub">看看这段时间完成了什么，以及下次可以怎样调整。</div></div></div>
+   <div class="grid stats">
+    <div class="card stat"><div><div class="stat-label">累计专注时间</div><div class="stat-value" id="review-hours">0h</div><div class="stat-note">所有计时记录</div></div><div class="stat-icon">◷</div></div>
+    <div class="card stat"><div><div class="stat-label">任务完成率</div><div class="stat-value" id="review-rate">0%</div><div class="stat-note">已完成 / 全部任务</div></div><div class="stat-icon">✓</div></div>
+    <div class="card stat"><div><div class="stat-label">已完成题目</div><div class="stat-value" id="review-questions">0</div><div class="stat-note">按任务记录汇总</div></div><div class="stat-icon">✎</div></div>
+    <div class="card stat"><div><div class="stat-label">已完成页数</div><div class="stat-value" id="review-pages">0</div><div class="stat-note">按章节进度汇总</div></div><div class="stat-icon">▤</div></div>
+   </div>
+   <div class="grid two-col">
+    <div class="card"><div class="section-title">各科实际学习时间</div><div id="subjectStats"></div></div>
+    <div class="card"><div class="section-title">本周复盘</div><div class="field"><label>这周做得不错的地方</label><textarea id="reviewGood" placeholder="例如：按计划完成了数学专项……"></textarea></div><div class="field"><label>遇到的困难</label><textarea id="reviewHard" placeholder="例如：英语阅读耗时比预计长……"></textarea></div><div class="field"><label>下周想改善的事情</label><textarea id="reviewNext" placeholder="例如：给错题整理留出更多时间……"></textarea></div><button class="btn primary" onclick="saveReview()">保存本周复盘</button><div id="reviewHistory" style="margin-top:15px"></div></div>
+   </div>
+  </section>
+
+  <section class="page" id="page-settings">
+   <div class="page-head"><div><div class="eyebrow">DATA</div><h1>数据与设置</h1><div class="sub">备份或恢复你的学习资料和记录。</div></div></div>
+   <div class="grid two-col">
+    <div class="card"><div class="section-title">数据备份与恢复</div><p class="sub">建议定期导出 JSON 文件。更换浏览器、清理网站数据或更换设备前，请先备份。</p><div class="actions" style="margin-top:16px"><button class="btn primary" onclick="exportData()">↓ 导出完整备份</button><button class="btn" onclick="document.getElementById('importFile').click()">↑ 导入备份</button><input id="importFile" type="file" accept=".json,application/json" hidden onchange="importData(event)"></div><div class="review-box" style="margin-top:16px">本版本使用 IndexedDB 本地存储，不会自动上传数据，也不会在不同设备间自动同步。未来增加云同步时，可以保留当前数据结构。</div></div>
+    <div class="card"><div class="section-title">数据概况</div><div id="dataOverview"></div><div style="height:15px"></div><button class="btn danger" onclick="clearAllData()">清空本地所有数据</button></div>
+   </div>
+   <div style="height:16px"></div><div class="card"><div class="section-title">使用说明</div><div class="review-box"><b>1.</b> 先在「教辅资料库」录入资料和章节。<br><b>2.</b> 在「任务中心」创建学校作业或其他待办。<br><b>3.</b> 在「智能计划」选择本周末要完成的章节与任务。<br><b>4.</b> 检查并调整自动生成的时间表，然后保存。<br><b>5.</b> 在「学习执行」中计时、更新题数和页数。<br><b>6.</b> 在「统计复盘」回顾本周表现。</div></div>
+   <div style="height:16px"></div>
+   <div class="grid two-col">
+    <div class="card"><div class="section-title">外观</div><div class="field"><label for="themeSelect">主题模式</label><select id="themeSelect"><option value="system">跟随系统</option><option value="light">日间模式</option><option value="dark">夜间模式</option></select></div><div class="ai-hint">主题选择保存在当前浏览器中。</div></div>
+    <div class="card"><div class="section-title">更多功能</div><div class="settings-row"><span>我的学习资料</span><button class="btn small" onclick="navigate('library')">打开</button></div><div class="settings-row"><span>开始学习 / 计时器</span><button class="btn small" onclick="navigate('session')">打开</button></div><div class="settings-row"><span>学习复盘</span><button class="btn small" onclick="navigate('review')">打开</button></div></div>
+   </div>
+   <div style="height:16px"></div>
+   <div class="card" id="aiConfigCard"><div class="section-title">AI 配置 <small>OpenAI / DeepSeek</small></div>
+    <div class="form-grid">
+     <div class="field"><label for="aiProvider">服务商</label><select id="aiProvider"><option value="deepseek">DeepSeek</option><option value="openai">OpenAI</option><option value="custom">自定义 OpenAI 兼容接口</option></select></div>
+     <div class="field"><label for="aiModel">模型 ID</label><input id="aiModel" placeholder="deepseek-flash"></div>
+     <div class="field full"><label for="aiBaseUrl">API Base URL</label><input id="aiBaseUrl" placeholder="https://api.deepseek.com"></div>
+     <div class="field full"><label for="aiApiKey">API Key</label><input id="aiApiKey" type="password" autocomplete="off" placeholder="粘贴你的 API Key"></div>
+    </div>
+    <div class="actions" style="align-items:center"><label style="font-size:12px;display:flex;gap:7px;align-items:center"><input type="checkbox" id="aiRememberKey"> 在本机记住 Key</label><button class="btn" type="button" id="aiForgetKey">删除已保存 Key</button><button class="btn" type="button" id="aiTest">测试连接</button><button class="btn primary" type="button" id="aiSave">保存配置</button></div>
+    <p class="ai-hint" id="aiConfigStatus" style="margin-top:12px">默认仅在当前会话中使用 Key。勾选「在本机记住 Key」会将 Key 存入浏览器本地存储。网页运行时仍可读取该 Key；请勿在公共设备上使用。不要把 Key 提交到 GitHub。</p>
+   </div>
+  </section>
+
+  <section class="page" id="page-ai">
+   <div class="page-head"><div><div class="eyebrow">AI ASSISTANT</div><h1>AI 助手</h1><div class="sub">用自然语言整理任务、讨论学习计划。AI 只提供建议，不会自动修改你的数据。</div></div><button class="btn" type="button" onclick="navigate('settings')">AI 配置</button></div>
+   <div class="ai-layout">
+    <div class="card ai-chat">
+     <div class="section-title">对话 <small id="aiStatus">尚未连接</small></div>
+     <div class="ai-messages" id="aiMessages"><div class="ai-message assistant">你好！我是 STUDY FLOW 助手。你可以让我帮你拆分任务、规划周末学习时间，或复盘学习进度。先到「设置与工具 → AI 配置」填写 API Key。</div></div>
+     <div class="ai-composer"><textarea id="aiInput" placeholder="例如：帮我把这周末的数学和英语任务安排得均衡一些……" rows="2"></textarea><button class="btn primary" id="aiSend" type="button">发送</button></div>
+     <div class="ai-hint" style="margin-top:8px">发送内容会直接提交给所选 AI 服务商。不要在对话中输入密码、账号等敏感信息。</div>
+    </div>
+    <aside class="card ai-side">
+     <div class="section-title">快速开始</div>
+     <div class="actions" style="flex-direction:column;align-items:stretch">
+      <button class="ai-chip" data-ai-prompt="请根据我当前的待办任务，帮我分析优先级，并给出调整建议。">整理当前任务</button>
+      <button class="ai-chip" data-ai-prompt="请帮我规划一个轻松、留有自由时间的周末学习安排。先给建议，不要直接修改数据。">规划周末学习</button>
+      <button class="ai-chip" data-ai-prompt="请根据我当前的学习记录，帮我做一次简短复盘，并提出可执行的改进建议。">复盘学习情况</button>
+     </div>
+     <div style="height:14px"></div><div class="section-title">上下文</div>
+     <label style="display:flex;gap:8px;align-items:flex-start;font-size:12px"><input type="checkbox" id="aiIncludeContext" checked> 发送时附带当前任务、资料和计划摘要</label>
+     <p class="ai-hint">仅发送必要的学习数据摘要，不会发送你的 API Key。你可以随时关闭此选项。</p>
+     <button class="btn" type="button" onclick="clearAIChat()">清空对话</button>
+    </aside>
+   </div>
+  </section>
+ </div>
+</main>
+<nav class="mobile-nav">
+ <button class="active" data-page="dashboard"><span>⌂</span>首页</button>
+ <button data-page="tasks"><span>☷</span>任务</button>
+ <button data-page="planner"><span>▦</span>计划</button>
+ <button data-page="ai"><span>✦</span>AI</button>
+ <button data-page="settings"><span>⚙</span>更多</button>
+</nav>
+</div>
+<div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-head"><h2 id="modalTitle">添加</h2><button class="close" onclick="closeModal()">×</button></div><div id="modalBody"></div></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const DB_NAME='study-flow-db', DB_VERSION=1;
+let db, state={resources:[],tasks:[],plans:[],sessions:[],reviews:[],settings:{}};
+let currentPage='dashboard',taskFilter='all',activeSession=null,timerInterval=null,elapsed=0,generatedPlan=null;
+const SUBJECTS=['语文','数学','英语','物理','化学','生物','历史','地理','政治','其他'];
+const SUBJECT_COLORS={'语文':'#b88765','数学':'#4d8cbe','英语':'#7b78b9','物理':'#4e9b91','化学':'#7e9b62','生物':'#65a58a','历史':'#bd8a55','地理':'#5e9eae','政治':'#9c789e','其他':'#8995a2'};
+const $=id=>document.getElementById(id);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mins=t=>{if(!t)return 0;let [h,m]=t.split(':').map(Number);return h*60+m};
+const timeStr=m=>`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+const fmtDuration=m=>m>=60?`${Math.floor(m/60)}小时${m%60?m%60+'分钟':''}`:`${m}分钟`;
+const todayISO=()=>new Date().toISOString().slice(0,10);
+const weekendDates=()=>{let d=new Date(),day=d.getDay(),sat=new Date(d);sat.setDate(d.getDate()+(day===0?-1:6-day));let sun=new Date(sat);sun.setDate(sat.getDate()+1);return [sat,sun].map(x=>x.toISOString().slice(0,10))};
+function openDB(){return new Promise((resolve,reject)=>{let req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{let d=req.result;['resources','tasks','plans','sessions','reviews','settings'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
+function dbGetAll(store){return new Promise((res,rej)=>{let r=db.transaction(store,'readonly').objectStore(store).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error)})}
+function dbPut(store,obj){return new Promise((res,rej)=>{let tx=db.transaction(store,'readwrite');tx.objectStore(store).put(obj);tx.oncomplete=()=>res(obj);tx.onerror=()=>rej(tx.error)})}
+function dbDelete(store,id){return new Promise((res,rej)=>{let tx=db.transaction(store,'readwrite');tx.objectStore(store).delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
+async function dbClear(store){return new Promise((res,rej)=>{let tx=db.transaction(store,'readwrite');tx.objectStore(store).clear();tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
+async function loadState(){for(let k of ['resources','tasks','plans','sessions','reviews','settings'])state[k]=await dbGetAll(k)}
+async function persist(store,obj){await dbPut(store,obj);let i=state[store].findIndex(x=>x.id===obj.id);if(i<0)state[store].push(obj);else state[store][i]=obj}
+async function remove(store,id){await dbDelete(store,id);state[store]=state[store].filter(x=>x.id!==id)}
+function toast(msg){let t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2300)}
+function navigatePlanner(){navigate('planner')}
+function navigate(page){currentPage=page;document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+page));document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));let names={dashboard:'首页',library:'我的学习资料',tasks:'待办任务',planner:'周末计划',session:'开始学习',review:'学习复盘',settings:'设置与工具',ai:'AI 助手',library:'我的学习资料',session:'开始学习',review:'学习复盘'};$('topTitle').textContent=names[page]||page;renderAll();window.scrollTo(0,0)}
+document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
+function openModal(title,html){$('modalTitle').textContent=title;$('modalBody').innerHTML=html;$('modalBackdrop').classList.add('show')}
+function closeModal(){$('modalBackdrop').classList.remove('show')}
+function resourceOptions(selected=''){return `<option value="">选择资料（可选）</option>`+state.resources.map(r=>`<option value="${r.id}" ${r.id===selected?'selected':''}>${esc(r.name)} · ${esc(r.subject)}</option>`).join('')}
+function openResourceModal(id=null){
+ let r=state.resources.find(x=>x.id===id),editing=!!r;
+ openModal(editing?'编辑教辅资料':'添加教辅资料',`
+ <form id="resourceForm"><div class="form-grid">
+ <div class="field full"><label>资料名称 *</label><input name="name" required value="${esc(r?.name||'')}" placeholder="例如：五年中考三年模拟"></div>
+ <div class="field"><label>科目 *</label><select name="subject" required>${SUBJECTS.map(s=>`<option ${r?.subject===s?'selected':''}>${s}</option>`).join('')}</select></div>
+ <div class="field"><label>资料类型</label><select name="type">${['同步练习','专项训练','试卷','知识梳理','其他'].map(s=>`<option ${r?.type===s?'selected':''}>${s}</option>`).join('')}</select></div>
+ <div class="field"><label>总页数</label><input name="totalPages" type="number" min="0" value="${r?.totalPages||''}" placeholder="例如 180"></div>
+ <div class="field"><label>总题量</label><input name="totalQuestions" type="number" min="0" value="${r?.totalQuestions||''}" placeholder="例如 320"></div>
+ <div class="field"><label>难度</label><select name="difficulty">${['简单','中等','较难','综合'].map(s=>`<option ${r?.difficulty===s?'selected':''}>${s}</option>`).join('')}</select></div>
+ <div class="field"><label>备注</label><input name="note" value="${esc(r?.note||'')}" placeholder="可选"></div></div>
+ <div class="actions"><button class="btn primary" type="submit">保存资料</button><button class="btn" type="button" onclick="closeModal()">取消</button></div></form>`);
+ $('resourceForm').onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target),obj={...(r||{}),id:r?.id||uid(),name:f.get('name').trim(),subject:f.get('subject'),type:f.get('type'),totalPages:+f.get('totalPages')||0,totalQuestions:+f.get('totalQuestions')||0,difficulty:f.get('difficulty'),note:f.get('note'),chapters:r?.chapters||[],createdAt:r?.createdAt||Date.now()};await persist('resources',obj);closeModal();renderAll();toast('资料已保存')};
+}
+function openChapterModal(resourceId,chapterId=null){
+ let r=state.resources.find(x=>x.id===resourceId),c=r.chapters.find(x=>x.id===chapterId);
+ openModal(c?'编辑章节':'添加章节',`<form id="chapterForm"><div class="form-grid">
+ <div class="field full"><label>章节名称 *</label><input name="name" required value="${esc(c?.name||'')}" placeholder="例如：一次函数"></div>
+ <div class="field"><label>起始页</label><input name="startPage" type="number" min="0" value="${c?.startPage||''}"></div>
+ <div class="field"><label>结束页</label><input name="endPage" type="number" min="0" value="${c?.endPage||''}"></div>
+ <div class="field"><label>总题数</label><input name="totalQuestions" type="number" min="0" value="${c?.totalQuestions||''}"></div>
+ <div class="field"><label>已完成题数</label><input name="doneQuestions" type="number" min="0" value="${c?.doneQuestions||0}"></div>
+ <div class="field"><label>已完成页数</label><input name="donePages" type="number" min="0" value="${c?.donePages||0}"></div>
+ <div class="field"><label>预计耗时（分钟）</label><input name="estimate" type="number" min="5" value="${c?.estimate||60}"></div>
+ <div class="field"><label>难度</label><select name="difficulty">${['简单','中等','较难','综合'].map(s=>`<option ${c?.difficulty===s?'selected':''}>${s}</option>`).join('')}</select></div>
+ <div class="field"><label>薄弱程度</label><select name="weakness">${['一般','较薄弱','薄弱'].map(s=>`<option ${c?.weakness===s?'selected':''}>${s}</option>`).join('')}</select></div>
+ </div><div class="actions"><button class="btn primary">保存章节</button><button type="button" class="btn" onclick="closeModal()">取消</button></div></form>`);
+ $('chapterForm').onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target),start=+f.get('startPage')||0,end=+f.get('endPage')||0,totalQ=+f.get('totalQuestions')||0;let obj={...(c||{}),id:c?.id||uid(),name:f.get('name').trim(),startPage:start,endPage:end,totalQuestions:totalQ,doneQuestions:Math.min(totalQ||Infinity,+f.get('doneQuestions')||0),donePages:Math.min(Math.max(0,end-start+1),+f.get('donePages')||0),estimate:Math.max(5,+f.get('estimate')||60),difficulty:f.get('difficulty'),weakness:f.get('weakness')};if(c)r.chapters=r.chapters.map(x=>x.id===c.id?obj:x);else r.chapters.push(obj);await persist('resources',r);closeModal();renderAll();toast('章节已保存')};
+}
+async function deleteResource(id){if(!confirm('删除这份资料？关联的章节计划也将无法继续引用。'))return;await remove('resources',id);renderAll();toast('资料已删除')}
+function renderLibrary(){
+ let q=($('librarySearch')?.value||'').toLowerCase(),sub=$('librarySubject')?.value||'',list=state.resources.filter(r=>(!sub||r.subject===sub)&&(!q||r.name.toLowerCase().includes(q)||r.chapters.some(c=>c.name.toLowerCase().includes(q))));
+ let select=$('librarySubject');if(select){let old=sub;select.innerHTML='<option value="">全部科目</option>'+SUBJECTS.map(s=>`<option ${old===s?'selected':''}>${s}</option>`).join('')}
+ $('libraryList').innerHTML=list.length?list.map(r=>{let tq=r.chapters.reduce((a,c)=>a+(c.totalQuestions||0),0),dq=r.chapters.reduce((a,c)=>a+(c.doneQuestions||0),0),tp=r.chapters.reduce((a,c)=>a+Math.max(0,(c.endPage||0)-(c.startPage||0)+1),0),dp=r.chapters.reduce((a,c)=>a+(c.donePages||0),0);return `<div class="card" style="margin-bottom:13px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div style="font-size:15px;font-weight:750">${esc(r.name)}</div><div class="sub">${esc(r.subject)} · ${esc(r.type||'资料')} · ${r.totalPages||'—'} 页 · ${r.totalQuestions||'—'} 题</div></div><div class="actions"><button class="btn small" onclick="openResourceModal('${r.id}')">编辑</button><button class="btn small danger" onclick="deleteResource('${r.id}')">删除</button></div></div>
+ <div style="display:flex;gap:18px;margin:15px 0 10px;flex-wrap:wrap"><div style="flex:1;min-width:130px"><div class="task-meta">章节题目进度 ${dq}/${tq||0}</div><div class="progress" style="margin-top:6px"><span style="width:${tq?dq/tq*100:0}%"></span></div></div><div style="flex:1;min-width:130px"><div class="task-meta">章节页数进度 ${dp}/${tp||0}</div><div class="progress green" style="margin-top:6px"><span style="width:${tp?dp/tp*100:0}%"></span></div></div></div>
+ <div class="section-title" style="margin-top:12px">章节 <small>${r.chapters.length} 个</small></div>
+ ${r.chapters.length?r.chapters.map(c=>`<div class="task-row"><div class="task-main"><div class="task-name">${esc(c.name)} <span class="tag">${esc(c.difficulty||'中等')}</span>${c.weakness!=='一般'?'<span class="tag orange">薄弱</span>':''}</div><div class="task-meta">第 ${c.startPage||'?'}—${c.endPage||'?'} 页 · 题目 ${c.doneQuestions||0}/${c.totalQuestions||0} · 已完成 ${c.donePages||0} 页</div></div><button class="btn small" onclick="openChapterModal('${r.id}','${c.id}')">编辑</button><button class="btn small" onclick="deleteChapter('${r.id}','${c.id}')">删除</button></div>`).join(''):'<div class="empty">还没有章节，添加章节后即可加入周末计划。</div>'}
+ <button class="btn soft small" style="margin-top:12px" onclick="openChapterModal('${r.id}')">＋ 添加章节</button></div>`}).join(''):'<div class="card empty"><div class="empty-icon">▤</div>还没有教辅资料。先添加一本你正在使用的资料吧。</div>';
+}
+async function deleteChapter(rid,cid){let r=state.resources.find(x=>x.id===rid);if(!confirm('删除这个章节？'))return;r.chapters=r.chapters.filter(c=>c.id!==cid);await persist('resources',r);renderAll();toast('章节已删除')}
+function openTaskModal(id=null){
+ let t=state.tasks.find(x=>x.id===id);
+ openModal(t?'编辑学习任务':'新建学习任务',`<form id="taskForm"><div class="form-grid">
+ <div class="field full"><label>任务名称 *</label><input name="name" required value="${esc(t?.name||'')}" placeholder="例如：完成学校数学作业"></div>
+ <div class="field"><label>科目</label><select name="subject">${SUBJECTS.map(s=>`<option ${t?.subject===s?'selected':''}>${s}</option>`).join('')}</select></div>
+ <div class="field"><label>关联教辅资料</label><select name="resourceId">${resourceOptions(t?.resourceId||'')}</select></div>
+ <div class="field"><label>预计耗时（分钟）</label><input name="estimate" type="number" min="5" value="${t?.estimate||45}"></div>
+ <div class="field"><label>题目数量（可选）</label><input name="totalQuestions" type="number" min="0" value="${t?.totalQuestions||''}"></div>
+ <div class="field"><label>优先级</label><select name="priority"><option value="1" ${t?.priority==1?'selected':''}>高</option><option value="2" ${!t||t.priority==2?'selected':''}>中</option><option value="3" ${t?.priority==3?'selected':''}>低</option></select></div>
+ <div class="field"><label>重要程度</label><select name="importance"><option value="1" ${t?.importance==1?'selected':''}>重要</option><option value="0" ${t?.importance===0?'selected':''}>不重要</option></select></div>
+ <div class="field"><label>紧急程度</label><select name="urgent"><option value="1" ${t?.urgent==1?'selected':''}>紧急</option><option value="0" ${t?.urgent===0?'selected':''}>不紧急</option></select></div>
+ <div class="field"><label>截止日期</label><input name="dueDate" type="date" value="${t?.dueDate||''}"></div>
+ <div class="field full"><label>备注</label><textarea name="note">${esc(t?.note||'')}</textarea></div>
+ </div><div class="actions"><button class="btn primary">保存任务</button><button type="button" class="btn" onclick="closeModal()">取消</button></div></form>`);
+ $('taskForm').onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target),obj={...(t||{}),id:t?.id||uid(),name:f.get('name').trim(),subject:f.get('subject'),resourceId:f.get('resourceId'),estimate:Math.max(5,+f.get('estimate')||45),totalQuestions:+f.get('totalQuestions')||0,doneQuestions:t?.doneQuestions||0,priority:+f.get('priority'),importance:+f.get('importance'),urgent:+f.get('urgent'),dueDate:f.get('dueDate'),note:f.get('note'),status:t?.status||'pending',createdAt:t?.createdAt||Date.now()};await persist('tasks',obj);closeModal();renderAll();toast('任务已保存')};
+}
+async function toggleTask(id){let t=state.tasks.find(x=>x.id===id);t.status=t.status==='done'?'pending':'done';t.completedAt=t.status==='done'?Date.now():null;await persist('tasks',t);renderAll()}
+async function deleteTask(id){if(!confirm('删除这个任务？'))return;await remove('tasks',id);renderAll()}
+function quadrant(t){return t.importance&&t.urgent?'q1':t.importance?'q2':t.urgent?'q3':'q4'}
+function renderTasks(){
+ let active=state.tasks.filter(t=>taskFilter==='all'||(taskFilter==='done'?t.status==='done':t.status!=='done'));
+ let defs=[['q1','重要且紧急','优先处理'],['q2','重要不紧急','长期积累'],['q3','不重要但紧急','尽量简化'],['q4','不重要不紧急','减少投入']];
+ $('quadrants').innerHTML=defs.map(([q,title,desc])=>`<div class="quad ${q}"><h3>${title}</h3><p>${desc}</p>${state.tasks.filter(t=>quadrant(t)===q&&t.status!=='done').map(t=>`<div class="quad-item">${esc(t.name)}</div>`).join('')||'<div style="font-size:10px;opacity:.65">暂无任务</div>'}</div>`).join('');
+ $('taskCount').textContent=`${active.length} 项`;
+ $('taskTable').innerHTML=active.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>任务</th><th>科目</th><th>优先级</th><th>预计时间</th><th>状态</th><th>操作</th></tr></thead><tbody>${active.map(t=>`<tr><td><b>${esc(t.name)}</b><div class="task-meta">${esc(t.note||'')}</div></td><td>${esc(t.subject)}</td><td><span class="tag ${t.priority===1?'red':t.priority===3?'':'orange'}">${['','高','中','低'][t.priority]}</span></td><td>${t.estimate} 分钟</td><td><span class="tag ${t.status==='done'?'green':'blue'}">${t.status==='done'?'已完成':'待完成'}</span></td><td><div class="actions"><button class="btn small" onclick="toggleTask('${t.id}')">${t.status==='done'?'撤销':'完成'}</button><button class="btn small" onclick="openTaskModal('${t.id}')">编辑</button><button class="btn small danger" onclick="deleteTask('${t.id}')">删除</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">还没有符合条件的任务。</div>';
+}
+document.querySelectorAll('#taskTabs button').forEach(b=>b.onclick=()=>{taskFilter=b.dataset.filter;document.querySelectorAll('#taskTabs button').forEach(x=>x.classList.toggle('active',x===b));renderTasks()});
+function renderPlannerChoices(){
+ let box=$('plannerChoices');let selected=new Set((generatedPlan?.selectedIds)||[]);
+ box.innerHTML=state.resources.length?state.resources.map(r=>`<div style="margin-bottom:13px"><div style="font-size:12px;font-weight:750;margin-bottom:6px">${esc(r.subject)} · ${esc(r.name)}</div>${r.chapters.map(c=>`<label style="display:flex;align-items:flex-start;gap:8px;padding:7px 4px;border-bottom:1px solid var(--line);font-size:11px"><input class="plan-select" type="checkbox" value="ch:${r.id}:${c.id}" ${selected.has(`ch:${r.id}:${c.id}`)?'checked':''} style="accent-color:var(--primary);margin-top:2px"><span style="flex:1">${esc(c.name)}<div class="task-meta">${c.doneQuestions||0}/${c.totalQuestions||0} 题 · ${c.donePages||0} 页已完成 · 预计 ${c.estimate} 分钟</div></span>${c.weakness!=='一般'?'<span class="tag orange">薄弱</span>':''}</label>`).join('')}</div>`).join(''):'<div class="empty">请先在资料库添加资料和章节。';
+ if(state.tasks.some(t=>t.status!=='done'))box.innerHTML+=`<div style="font-size:12px;font-weight:750;margin:14px 0 5px">独立待办任务</div>`+state.tasks.filter(t=>t.status!=='done').map(t=>`<label style="display:flex;gap:8px;padding:7px 4px;border-bottom:1px solid var(--line);font-size:11px"><input class="plan-select" type="checkbox" value="task:${t.id}" ${selected.has(`task:${t.id}`)?'checked':''} style="accent-color:var(--primary);margin-top:2px"><span>${esc(t.name)}<div class="task-meta">${esc(t.subject)} · ${t.estimate} 分钟</div></span></label>`).join('');
+}
+function parseBlocked(){
+ let lines=$('blocked').value.split('\n').map(x=>x.trim()).filter(Boolean),out={sat:[],sun:[]};
+ for(let line of lines){let day=line.includes('星期日')||line.includes('周日')||line.toLowerCase().includes('sun')?'sun':'sat',m=line.match(/(\d{1,2}:\d{2})\s*[-—~至]\s*(\d{1,2}:\d{2})/);if(m)out[day].push([mins(m[1]),mins(m[2])])}
+ return out;
+}
+function selectedItems(){
+ return [...document.querySelectorAll('.plan-select:checked')].map(el=>{
+ let v=el.value,p=v.split(':');
+ if(p[0]==='task'){let t=state.tasks.find(x=>x.id===p[1]);return t?{key:v,type:'task',refId:t.id,name:t.name,subject:t.subject,estimate:t.estimate,priority:t.priority,importance:t.importance,urgent:t.urgent,weakness:0,difficulty:1,questions:t.totalQuestions||0,pages:0}:null}
+ let r=state.resources.find(x=>x.id===p[1]),c=r?.chapters.find(x=>x.id===p[2]);if(!r||!c)return null;
+ let remainQ=Math.max(0,(c.totalQuestions||0)-(c.doneQuestions||0)),totalPages=Math.max(0,(c.endPage||0)-(c.startPage||0)+1),remainP=Math.max(0,totalPages-(c.donePages||0));
+ if(remainQ===0&&remainP===0)return null;
+ return {key:v,type:'chapter',refId:r.id,chapterId:c.id,name:c.name,subject:r.subject,resourceName:r.name,estimate:c.estimate,priority:2,importance:1,urgent:0,weakness:c.weakness==='薄弱'?2:c.weakness==='较薄弱'?1:0,difficulty:c.difficulty==='较难'?2:c.difficulty==='综合'?2:c.difficulty==='简单'?0:1,questions:remainQ,pages:remainP};
+ }).filter(Boolean);
+}
+function scoreItem(x,mode){
+ let s=(x.importance?30:0)+(x.urgent?25:0)+(x.weakness*10)+(x.difficulty*5)+(x.priority===1?8:x.priority===3?-4:0);
+ if(mode==='weak')s+=x.weakness*18;if(mode==='urgent')s+=x.urgent*20+x.importance*5;if(mode==='exam')s+=x.urgent*18+x.priority*0;
+ return s;
+}
+function generatePlan(){
+ let items=selectedItems();if(!items.length){toast('请先选择至少一项未完成的学习内容');return}
+ let config={satStart:mins($('satStart').value),satEnd:mins($('satEnd').value),sunStart:mins($('sunStart').value),sunEnd:mins($('sunEnd').value),breakStart:mins($('breakStart').value),breakEnd:mins($('breakEnd').value),intensity:$('intensity').value,mode:$('planMode').value,blocked:parseBlocked()};
+ if(config.satEnd<=config.satStart||config.sunEnd<=config.sunStart){toast('请检查开始和结束时间');return}
+ if(config.breakEnd<config.breakStart){toast('午间休息时间不正确');return}
+ let factor={light:.65,standard:.78,focused:.9}[config.intensity],slots=[];
+ for(let day of ['sat','sun']){
+  let start=config[day+'Start'],end=config[day+'End'],cursor=start;
+  let breaks=config.blocked[day].slice();if(config.breakEnd>config.breakStart)breaks.push([config.breakStart,config.breakEnd]);
+  breaks.sort((a,b)=>a[0]-b[0]);
+  let usable=[];let pos=start;
+  for(let [bs,be] of breaks){if(be<=pos||bs>=end)continue;if(bs>pos)usable.push([pos,Math.min(bs,end)]);pos=Math.max(pos,be)}
+  if(pos<end)usable.push([pos,end]);
+  usable.forEach(([a,b])=>{if(b-a>=20)slots.push({day,start:a,end:b,cursor:a})});
+ }
+ let totalCapacity=slots.reduce((a,s)=>a+(s.end-s.start),0),targetCapacity=totalCapacity*factor;
+ let sorted=items.slice().sort((a,b)=>scoreItem(b,config.mode)-scoreItem(a,config.mode));
+ // Use short work blocks for demanding tasks and reserve unallocated gaps.
+ let scheduled=[],remaining=targetCapacity,dayLast={sat:'',sun:''},idx=0;
+ for(let item of sorted){
+  let desired=Math.max(15,Math.min(item.estimate||45,120));
+  if(remaining<15)break;
+  let need=Math.min(desired,remaining),left=need,parts=0;
+  while(left>=15&&parts<2){
+   let candidates=slots.filter(s=>s.end-s.cursor>=20);
+   if(!candidates.length)break;
+   candidates.sort((a,b)=>{
+    let da=dayLast[a.day]===item.subject?1:0,db=dayLast[b.day]===item.subject?1:0;
+    return da-db||a.cursor-b.cursor;
+   });
+   let slot=candidates[0],available=slot.end-slot.cursor;
+   let chunk=Math.min(left,available,parts===0?75:45);
+   if(chunk<15)break;
+   scheduled.push({id:uid(),day:slot.day,start:slot.cursor,end:slot.cursor+chunk,type:'study',itemKey:item.key,itemName:item.name,subject:item.subject,estimate:chunk,status:'pending',resourceName:item.resourceName||'',questions:item.questions||0,pages:item.pages||0});
+   slot.cursor+=chunk;left-=chunk;remaining-=chunk;parts++;dayLast[slot.day]=item.subject;
+   if(left>0){let gap=slot.end-slot.cursor;if(gap>=10){slot.cursor+=Math.min(10,gap);remaining-=Math.min(10,gap)}}
+  }
+  if(parts===0)continue;
+  if(left>0){item.unallocated=left}
+ }
+ // Add visible short breaks between adjacent study blocks, but never overwrite lunch or blocked time.
+ for(let day of ['sat','sun']){
+  let dayItems=scheduled.filter(x=>x.day===day).sort((a,b)=>a.start-b.start),withBreak=[];
+  for(let i=0;i<dayItems.length;i++){withBreak.push(dayItems[i]);if(i<dayItems.length-1&&dayItems[i+1].start-dayItems[i].end>=8&&dayItems[i+1].start-dayItems[i].end<=20)withBreak.push({id:uid(),day,start:dayItems[i].end,end:dayItems[i].end+10,type:'break',itemName:'短暂休息',subject:'休息',status:'pending'})}
+  scheduled=scheduled.filter(x=>x.day!==day).concat(withBreak);
+ }
+ generatedPlan={id:uid(),createdAt:Date.now(),dates:weekendDates(),config,selectedIds:items.map(x=>x.key),items:scheduled.sort((a,b)=>a.day.localeCompare(b.day)||a.start-b.start),unallocated:items.filter(x=>x.unallocated).map(x=>({name:x.name,minutes:x.unallocated})),saved:false};
+ renderPlanOutput();toast('已生成周末计划，可以继续调整');
+}
+function renderPlanOutput(){
+ let p=generatedPlan;if(!p){$('planOutput').innerHTML='<div class="empty">尚未生成计划。</div>';return}
+ let study=p.items.filter(x=>x.type==='study'),total=study.reduce((a,x)=>a+x.end-x.start,0),dates=p.dates;
+ $('planSummary').textContent=`${study.length} 个时间块 · ${fmtDuration(total)} 学习 · 留有自由时间`;
+ $('planOutput').innerHTML=`<div class="day-columns">${['sat','sun'].map((d,i)=>{let arr=p.items.filter(x=>x.day===d);return `<div class="day-card"><div class="day-head"><strong>${i?'星期日':'星期六'}</strong><span class="tag blue">${dates[i]}</span></div>${arr.length?arr.map(x=>`<div class="slot"><div class="slot-time">${timeStr(x.start)}—${timeStr(x.end)}</div><div class="slot-body ${x.type==='break'?'break':''} ${x.status==='done'?'done':''}"><div class="slot-title">${esc(x.itemName)}</div><div class="slot-meta">${x.type==='break'?'休息时间':`${esc(x.subject)} · ${x.end-x.start} 分钟`}</div>${x.type==='study'?`<div class="slot-actions"><button class="btn small" onclick="editPlanSlot('${x.id}')">调整</button><button class="btn small danger" onclick="removePlanSlot('${x.id}')">移除</button></div>`:''}</div></div>`).join(''):'<div class="empty">暂未安排学习任务，保留为自由时间。</div>'}</div>`}).join('')}</div>${p.unallocated.length?`<div class="review-box" style="margin-top:12px"><b>尚未完整安排：</b>${p.unallocated.map(x=>`${esc(x.name)}（约 ${x.minutes} 分钟）`).join('、')}。可以减少任务量或调整可用时间。</div>`:''}<div class="review-box" style="margin-top:12px">空白时间就是自由时间，不需要为了填满时间表而增加任务。保存后可在「学习执行」中使用。</div>`;
+}
+function editPlanSlot(id){let x=generatedPlan.items.find(z=>z.id===id);if(!x)return;openModal('调整时间块',`<form id="slotForm"><div class="field"><label>学习日期</label><select name="day"><option value="sat" ${x.day==='sat'?'selected':''}>星期六</option><option value="sun" ${x.day==='sun'?'selected':''}>星期日</option></select></div><div class="form-grid"><div class="field"><label>开始时间</label><input type="time" name="start" value="${timeStr(x.start)}" required></div><div class="field"><label>结束时间</label><input type="time" name="end" value="${timeStr(x.end)}" required></div></div><div class="actions"><button class="btn primary">保存调整</button></div></form>`);$('slotForm').onsubmit=e=>{e.preventDefault();let f=new FormData(e.target),start=mins(f.get('start')),end=mins(f.get('end'));if(end<=start){toast('结束时间必须晚于开始时间');return}let collision=generatedPlan.items.some(y=>y.id!==id&&y.day===f.get('day')&&start<y.end&&end>y.start);if(collision){toast('这个时间段与其他安排重叠');return}x.day=f.get('day');x.start=start;x.end=end;x.estimate=end-start;closeModal();renderPlanOutput()}}
+function removePlanSlot(id){if(!confirm('从计划中移除这个时间块？'))return;generatedPlan.items=generatedPlan.items.filter(x=>x.id!==id);renderPlanOutput()}
+async function savePlan(){if(!generatedPlan){toast('请先生成计划');return}let existing=state.plans.find(p=>p.dates?.[0]===generatedPlan.dates[0]);if(existing){if(!confirm('本周末已有保存的计划，是否覆盖？'))return;await remove('plans',existing.id)}generatedPlan.saved=true;await persist('plans',generatedPlan);renderAll();toast('周末计划已保存')}
+function latestPlan(){return state.plans.slice().sort((a,b)=>b.createdAt-a.createdAt)[0]}
+function renderSession(){
+ let p=latestPlan(),today=todayISO(),todayDay=p?.dates?.[0]===today?'sat':p?.dates?.[1]===today?'sun':null;
+ if(activeSession){let task=state.tasks.find(t=>t.id===activeSession.taskId);$('currentTask').innerHTML=`<div class="review-box"><div class="tag green">计时中</div><h2 style="font-size:18px">${esc(activeSession.name)}</h2><div id="timerDisplay" style="font-size:34px;font-weight:800;text-align:center;margin:18px 0">00:00:00</div><div class="actions"><button class="btn" onclick="pauseTimer()">暂停计时</button><button class="btn primary" onclick="finishSession()">结束并记录</button></div></div>`}
+ else $('currentTask').innerHTML='<div class="empty"><div class="empty-icon">◷</div>选择一项任务，开始你的专注时间。</div>';
+ $('sessionAgenda').innerHTML=p&&todayDay?p.items.filter(x=>x.day===todayDay).map(x=>`<div class="task-row"><div class="task-main"><div class="task-name">${esc(x.itemName)}</div><div class="task-meta">${timeStr(x.start)}—${timeStr(x.end)} · ${esc(x.subject)}</div></div><span class="tag ${x.status==='done'?'green':'blue'}">${x.status==='done'?'完成':'计划中'}</span></div>`).join('')||'<div class="empty">今天没有已保存的安排。</div>':'<div class="empty">今天没有已保存的周末安排。</div>';
+ let pending=state.tasks.filter(t=>t.status!=='done');let chapterTasks=[];
+ if(p)for(let x of p.items.filter(x=>x.type==='study'&&x.status!=='done'))chapterTasks.push(x);
+ $('sessionTasks').innerHTML=[...pending.map(t=>`<div class="task-row"><div class="task-main"><div class="task-name">${esc(t.name)}</div><div class="task-meta">${esc(t.subject)} · 预计 ${t.estimate} 分钟</div></div><button class="btn small primary" onclick="startSession('${t.id}','task')">开始</button></div>`),...chapterTasks.map(x=>`<div class="task-row"><div class="task-main"><div class="task-name">${esc(x.itemName)}</div><div class="task-meta">${esc(x.subject)} · 计划 ${x.end-x.start} 分钟</div></div><button class="btn small primary" onclick="startSession('${x.id}','plan')">开始</button></div>`)].join('')||'<div class="empty">目前没有待执行任务。</div>';
+ if(activeSession)updateTimerDisplay();
+}
+function startSession(id,type){if(activeSession){toast('请先结束当前计时');return}let obj;if(type==='task'){let t=state.tasks.find(x=>x.id===id);if(!t)return;obj={taskId:id,name:t.name,subject:t.subject,type}}else{let p=latestPlan(),x=p?.items.find(x=>x.id===id);if(!x)return;obj={planId:p.id,slotId:id,name:x.itemName,subject:x.subject,type}}activeSession={...obj,start:Date.now(),elapsed:0};elapsed=0;timerInterval=setInterval(()=>{elapsed=Math.floor((Date.now()-activeSession.start)/1000);updateTimerDisplay()},1000);renderSession()}
+function pauseTimer(){if(!activeSession)return;clearInterval(timerInterval);activeSession.elapsed=elapsed;activeSession.pausedAt=Date.now();activeSession.running=false;$('sessionStatus').textContent='已暂停';$('currentTask').innerHTML=`<div class="review-box"><div class="tag orange">已暂停</div><h2>${esc(activeSession.name)}</h2><div style="font-size:30px;font-weight:800;text-align:center;margin:15px">${formatClock(activeSession.elapsed)}</div><div class="actions"><button class="btn primary" onclick="resumeTimer()">继续</button><button class="btn" onclick="finishSession()">结束并记录</button></div></div>`}
+function resumeTimer(){if(!activeSession)return;activeSession.start=Date.now()-activeSession.elapsed*1000;activeSession.running=true;timerInterval=setInterval(()=>{elapsed=Math.floor((Date.now()-activeSession.start)/1000);activeSession.elapsed=elapsed;updateTimerDisplay()},1000);renderSession()}
+function formatClock(s){return [Math.floor(s/3600),Math.floor(s%3600/60),s%60].map(x=>String(x).padStart(2,'0')).join(':')}
+function updateTimerDisplay(){let el=$('timerDisplay');if(el)el.textContent=formatClock(activeSession?.running===false?activeSession.elapsed:Math.floor((Date.now()-activeSession.start)/1000))}
+async function finishSession(){if(!activeSession)return;clearInterval(timerInterval);let seconds=activeSession.running===false?activeSession.elapsed:Math.floor((Date.now()-activeSession.start)/1000),session={id:uid(),date:todayISO(),taskId:activeSession.taskId||null,planId:activeSession.planId||null,slotId:activeSession.slotId||null,name:activeSession.name,subject:activeSession.subject,seconds,createdAt:Date.now()};await persist('sessions',session);if(activeSession.type==='task'){let t=state.tasks.find(x=>x.id===activeSession.taskId);if(t)t.actualMinutes=(t.actualMinutes||0)+Math.round(seconds/60)}else{let p=state.plans.find(x=>x.id===activeSession.planId),x=p?.items.find(z=>z.id===activeSession.slotId);if(x){x.status='done';await persist('plans',p)}}
+ let was=activeSession;activeSession=null;elapsed=0;renderAll();openModal('记录本次学习',`<form id="sessionFeedback"><p class="sub">本次专注 ${fmtDuration(Math.max(1,Math.round(seconds/60)))}。可以补充实际完成进度。</p><div class="form-grid"><div class="field"><label>完成题数</label><input name="questions" type="number" min="0" value="0"></div><div class="field"><label>完成页数</label><input name="pages" type="number" min="0" value="0"></div></div><div class="field"><label>学习感受 / 遗留问题</label><textarea name="note" placeholder="可选"></textarea></div><button class="btn primary">保存记录</button></form>`);$('sessionFeedback').onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target);session.questions=+f.get('questions')||0;session.pages=+f.get('pages')||0;session.note=f.get('note');await persist('sessions',session);if(was.type==='task'){let t=state.tasks.find(x=>x.id===was.taskId);if(t){t.doneQuestions=Math.min(t.totalQuestions||Infinity,(t.doneQuestions||0)+session.questions);await persist('tasks',t)}}else if(was.type==='plan'){let p=state.plans.find(x=>x.id===was.planId),slot=p?.items.find(x=>x.id===was.slotId),parts=(slot?.itemKey||'').split(':');if(parts[0]==='ch'){let r=state.resources.find(x=>x.id===parts[1]),c=r?.chapters.find(x=>x.id===parts[2]);if(c){c.doneQuestions=Math.min(c.totalQuestions||Infinity,(c.doneQuestions||0)+session.questions);let pageTotal=Math.max(0,(c.endPage||0)-(c.startPage||0)+1);c.donePages=Math.min(pageTotal||Infinity,(c.donePages||0)+session.pages);await persist('resources',r)}}}closeModal();renderAll();toast('学习记录已保存')}}
+function renderDashboard(){
+ let done=state.tasks.filter(t=>t.status==='done').length,pending=state.tasks.length-done,hours=state.sessions.reduce((a,s)=>a+(s.seconds||0),0)/3600;
+ $('stat-hours').textContent=hours.toFixed(1)+'h';$('stat-done').textContent=done;$('stat-pending').textContent=pending;$('stat-books').textContent=state.resources.length;
+ let upcoming=state.tasks.filter(t=>t.status!=='done').sort((a,b)=>scoreItem(b,'balanced')-scoreItem(a,'balanced')).slice(0,5);
+ $('dashboardTasks').innerHTML=upcoming.length?upcoming.map(t=>`<div class="task-row"><input class="check" type="checkbox" onchange="toggleTask('${t.id}')"><div class="task-main"><div class="task-name">${esc(t.name)}</div><div class="task-meta">${esc(t.subject)} · ${t.estimate} 分钟</div></div><span class="tag ${t.priority===1?'red':'blue'}">${t.priority===1?'高优先级':'待完成'}</span></div>`).join(''):'<div class="empty">目前没有待办任务。你可以添加一项学习任务。</div>';
+ let p=latestPlan();$('weekendLabel').textContent=p?p.dates.join(' / '):'尚未安排';$('dashboardPlan').innerHTML=p?`<div class="stat-value" style="font-size:24px">${fmtDuration(p.items.filter(x=>x.type==='study').reduce((a,x)=>a+x.end-x.start,0))}</div><div class="sub">计划学习时间</div><div style="margin:13px 0"><div class="task-meta">星期六 · ${p.items.filter(x=>x.day==='sat'&&x.type==='study').length} 个学习时间块</div><div class="task-meta">星期日 · ${p.items.filter(x=>x.day==='sun'&&x.type==='study').length} 个学习时间块</div></div><button class="btn soft small" onclick="navigatePlanner()">查看与调整计划</button>`:'<div class="empty">还没有保存的周末计划。<br><button class="btn soft small" style="margin-top:10px" onclick="navigatePlanner()">去生成计划</button></div>';
+}
+function renderReview(){
+ let seconds=state.sessions.reduce((a,s)=>a+(s.seconds||0),0),done=state.tasks.filter(t=>t.status==='done').length,rate=state.tasks.length?Math.round(done/state.tasks.length*100):0,questions=state.sessions.reduce((a,s)=>a+(s.questions||0),0),pages=state.sessions.reduce((a,s)=>a+(s.pages||0),0);
+ $('review-hours').textContent=(seconds/3600).toFixed(1)+'h';$('review-rate').textContent=rate+'%';$('review-questions').textContent=questions;$('review-pages').textContent=pages;
+ let map={};state.sessions.forEach(s=>map[s.subject||'其他']=(map[s.subject||'其他']||0)+s.seconds);let max=Math.max(1,...Object.values(map));
+ $('subjectStats').innerHTML=Object.keys(map).length?Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([s,v])=>`<div style="margin:13px 0"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px"><b>${esc(s)}</b><span class="muted">${(v/3600).toFixed(1)} 小时</span></div><div class="progress"><span style="width:${v/max*100}%;background:${SUBJECT_COLORS[s]||'#5794c4'}"></span></div></div>`).join(''):'<div class="empty">完成学习计时后，这里会显示各科投入时间。</div>';
+ $('reviewHistory').innerHTML=state.reviews.slice().sort((a,b)=>b.createdAt-a.createdAt).slice(0,4).map(r=>`<div class="task-row"><div class="task-main"><div class="task-name">${r.date}</div><div class="task-meta">${esc(r.good||'暂无记录')}</div></div></div>`).join('');
+}
+async function saveReview(){let r={id:uid(),date:todayISO(),good:$('reviewGood').value,hard:$('reviewHard').value,next:$('reviewNext').value,createdAt:Date.now()};await persist('reviews',r);$('reviewGood').value='';$('reviewHard').value='';$('reviewNext').value='';renderReview();toast('复盘已保存')}
+function renderSettings(){$('dataOverview').innerHTML=`<div class="task-row"><div class="task-main">教辅资料</div><b>${state.resources.length}</b></div><div class="task-row"><div class="task-main">学习任务</div><b>${state.tasks.length}</b></div><div class="task-row"><div class="task-main">已保存计划</div><b>${state.plans.length}</b></div><div class="task-row"><div class="task-main">学习记录</div><b>${state.sessions.length}</b></div><div class="task-row"><div class="task-main">复盘记录</div><b>${state.reviews.length}</b></div>`}
+function renderAll(){renderDashboard();renderLibrary();renderTasks();renderPlannerChoices();if(generatedPlan)renderPlanOutput();renderSession();renderReview();renderSettings()}
+function exportData(){let data={app:'STUDY FLOW',version:1,exportedAt:new Date().toISOString(),...state};let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`study-flow-backup-${todayISO()}.json`;a.click();URL.revokeObjectURL(a.href);toast('备份文件已导出')}
+async function importData(e){let file=e.target.files[0];if(!file)return;try{let data=JSON.parse(await file.text());if(data.app!=='STUDY FLOW'||!Array.isArray(data.resources)||!Array.isArray(data.tasks))throw new Error('文件格式不正确');if(!confirm('导入将覆盖当前本地数据，建议先导出备份。确定继续吗？'))return;for(let k of ['resources','tasks','plans','sessions','reviews','settings']){await dbClear(k);state[k]=Array.isArray(data[k])?data[k]:[];for(let obj of state[k])await dbPut(k,obj)}renderAll();toast('数据恢复成功')}catch(err){alert('导入失败：'+err.message)}e.target.value=''}
+async function clearAllData(){if(!confirm('确定清空当前浏览器中的全部 STUDY FLOW 数据？此操作无法撤销，请先备份。'))return;if(!confirm('再次确认：所有资料、任务、计划和记录都会被删除。'))return;for(let k of ['resources','tasks','plans','sessions','reviews','settings']){await dbClear(k);state[k]=[]}generatedPlan=null;renderAll();toast('本地数据已清空')}
+function initDate(){let d=new Date();$('todayText').textContent=d.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});let h=d.getHours();$('greeting').textContent=h<11?'早上好，今天也向目标迈进一步。':h<18?'下午好，今天也向目标迈进一步。':'晚上好，给今天一个轻松的收尾。';let dates=weekendDates();$('weekendLabel').textContent=dates.join(' / ')}
+(async function init(){try{db=await openDB();await loadState();initDate();renderAll()}catch(e){console.error(e);alert('本地数据库初始化失败。请使用较新的 Chrome、Edge、Safari 或 Firefox 浏览器，并避免在隐私浏览模式下运行。')}})();
+</script>
+<script src="./theme.js"></script>
+<script src="./ai.js"></script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(e=>console.warn("PWA 缓存注册失败",e)));}</script>
+</body>
+</html>
