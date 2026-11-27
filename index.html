@@ -513,6 +513,27 @@ async function generatePlan(){
  if(aiAdvice?.advice&&$('plannerAIStatus'))$('plannerAIStatus').textContent='AI 分析完成：'+aiAdvice.advice+' 时间表已生成，你可以继续调整。';
  renderPlanOutput();toast(aiRank.size?'AI 综合分析周末计划已生成':'已生成周末计划，可以继续调整');
 }
+
+/* AI 助手的周末计划配置入口：AI 可直接设置参数、选择任务并生成计划。 */
+window.studyFlowConfigureWeekend=async function(config={}){
+ const allowedTimes=['satStart','satEnd','sunStart','sunEnd','breakStart','breakEnd'];
+ for(const key of allowedTimes){if(config[key])$(key).value=String(config[key]);}
+ if(config.intensity&&['light','standard','focused'].includes(config.intensity))$('intensity').value=config.intensity;
+ if(config.mode&&['balanced','weak','urgent','exam'].includes(config.mode))$('planMode').value=config.mode;
+ if(typeof config.blocked==='string')$('blocked').value=config.blocked;
+ const requested=Array.isArray(config.taskIds)?new Set(config.taskIds.map(String)):null;
+ if(requested){
+  document.querySelectorAll('.plan-select').forEach(el=>{
+   const raw=el.value, id=raw.startsWith('task:')?raw.slice(5):raw.startsWith('ch:')?raw.slice(3):raw;
+   el.checked=requested.has(raw)||requested.has(id);
+  });
+ }
+ $('plannerAIAssist').checked=config.useAI!==false;
+ if(typeof navigate==='function')navigate('planner');
+ await generatePlan();
+ return !!generatedPlan;
+};
+
 function renderPlanOutput(){
  let p=generatedPlan;if(!p){$('planOutput').innerHTML='<div class="empty">尚未生成计划。</div>';return}
  let study=p.items.filter(x=>x.type==='study'),total=study.reduce((a,x)=>a+x.end-x.start,0),dates=p.dates;
