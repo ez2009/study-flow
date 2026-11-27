@@ -68,6 +68,10 @@
     }catch(e){messages.push({role:'assistant',content:'请求失败：'+(e.message||String(e))+'\n\n如果你使用 GitHub Pages，请确认服务商允许浏览器跨域请求（CORS）。如果浏览器报告 CORS 错误，纯静态前端无法绕过，需要改用可信代理服务。'});saveChat();renderChat()}
     finally{busy=false;if(btn){btn.disabled=false;btn.textContent='发送'}updateAIStatus()}
   }
+  async function requestForPlanner(systemPrompt,userPrompt){
+    if(!getKey())throw new Error('请先到「设置与工具 → AI 配置」填写 API Key。');
+    return callAPI([{role:'system',content:systemPrompt},{role:'user',content:userPrompt}]);
+  }
   async function testConnection(){if(!saveConfig())return;const key=getKey();if(!key){setStatus('请先填写 API Key。',true);return}setStatus('正在测试连接…');try{const answer=await callAPI([{role:'user',content:'请只回复：连接成功'}]);setStatus('连接成功：'+answer.slice(0,80));}catch(e){setStatus('连接失败：'+e.message,true)}}
   function clearChat(){if(!confirm('确定清空 AI 对话历史？'))return;messages=[];saveChat();renderChat()}
   document.addEventListener('DOMContentLoaded',()=>{
@@ -82,4 +86,5 @@
   });
   window.clearAIChat=clearChat;
   window.studyFlowSendAI=send;
+  window.studyFlowAIRequest=requestForPlanner;
 })();
