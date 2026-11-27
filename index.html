@@ -214,7 +214,7 @@ html[data-theme="dark"] .mobile-nav button{color:#aebdcb}html[data-theme="dark"]
       <div class="field full">
        <label for="cloudPassword">云同步加密密码（至少 10 位）</label>
        <input id="cloudPassword" type="password" autocomplete="new-password" placeholder="自行设置；所有设备使用同一个密码">
-       <span class="ai-hint">这是你自己设置的加密密码，不是 GitHub 密码。为保护数据，密码不会保存在浏览器；刷新页面后需要重新输入。</span>
+       <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px"><input type="checkbox" id="cloudRememberPassword" checked> 在此设备记住加密密码</label><span class="ai-hint">勾选后，加密密码会保存在当前浏览器本机；不会上传到 GitHub。每台新设备首次仍需输入一次相同密码。</span>
       </div>
      </div>
      <div class="actions" style="flex-wrap:wrap">
@@ -223,14 +223,14 @@ html[data-theme="dark"] .mobile-nav button{color:#aebdcb}html[data-theme="dark"]
       <button class="btn" id="cloudDownload" type="button">下载云端数据</button>
       <button class="btn" id="cloudUpload" type="button">上传本机覆盖云端</button>
      </div>
-     <div class="settings-row" style="margin-top:10px"><label style="display:flex;align-items:center;gap:8px;font-size:12px"><input type="checkbox" id="cloudAuto" checked> 自动检查本地更改</label><span class="ai-hint">每 20 秒检查一次；刷新页面后需重新输入加密密码</span></div>
+     <div class="settings-row" style="margin-top:10px"><label style="display:flex;align-items:center;gap:8px;font-size:12px"><input type="checkbox" id="cloudAuto" checked> 自动检查本地更改</label><span class="ai-hint">每 20 秒检查本机和云端更新；其他设备有新数据时自动下载</span></div>
      <p class="ai-hint" id="cloudSyncStatus" role="status" aria-live="polite" style="margin-top:10px">尚未连接。请按上方步骤配置 Token 和加密密码。</p>
      <details class="advanced-options" style="margin-top:12px"><summary>更多连接与安全说明</summary>
       <div class="ai-hint">
-       <p>• Token 只保存在当前浏览器。换设备或浏览器需要重新配置；Token 到期后，请在 GitHub 重新创建并替换。</p>
+       <p>• GitHub Token 只保存在当前浏览器。换设备或浏览器需要在该设备配置一次；Token 到期后，请在 GitHub 重新创建并替换。</p>
        <p>• 本项目只请求 <b>ez2009/study-flow</b> 仓库的 Contents 内容读写权限。不要授予不必要的其他权限。</p>
        <p>• 云端数据使用 AES-256-GCM 加密后再上传。仓库是公开仓库，因此不要把明文备份、API Key、Token 或其他秘密提交到仓库。</p>
-       <p>• 加密密码不会上传或保存在浏览器。请自行妥善保管；忘记密码无法恢复云端数据。</p>
+       <p>• 可选择在当前设备记住加密密码；密码不会上传到 GitHub。每台新设备首次仍需输入相同密码。忘记密码无法恢复云端数据。</p>
        <p>• 云同步数据存放在独立的 <code>study-flow-data</code> 分支，不会与网站代码所在的 <code>main</code> 分支混在一起。</p>
        <p>• 如果检测到云端版本被其他设备修改，自动同步会暂停，避免静默覆盖。请先选择下载云端或上传本机覆盖。</p>
        <p>• 首次连接前建议先点击上方「导出完整备份」，保留一份本机 JSON 备份。</p>
