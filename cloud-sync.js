@@ -83,7 +83,14 @@
     const path='/repos/'+OWNER+'/'+REPO+'/contents/'+FILE_PATH.split('/').map(encodeURIComponent).join('/');
     const payload={message:'chore: update encrypted study data',content:toB64(JSON.stringify(envelope)),branch:BRANCH};
     if (sha) payload.sha=sha;
-    return api(path,{method:'PUT',body:JSON.stringify(payload)});
+    const result=await api(path,{method:'PUT',body:JSON.stringify(payload)});
+    // GitHub's Contents API should return a file object after a successful PUT.
+    // Guard against an empty/null response so the UI shows a useful diagnostic
+    // instead of a JavaScript "reading content of null" exception.
+    if (!result || !result.content || !result.content.sha) {
+      throw new Error('GitHub 没有返回云端文件信息，无法确认上传结果。请检查 Token 的 Contents 读写权限、study-flow-data 分支是否存在，然后重试；不要连续重复上传。');
+    }
+    return result;
   }
   async function snapshot() {
     const db=await new Promise((resolve,reject)=>{
@@ -129,7 +136,7 @@
     const data=await snapshot(), fp=fingerprint(data);
     const envelope=await encryptData(data,password);
     const result=await writeRemote(envelope,remote?.sha);
-    setBaseline(result.content?.sha || result.commit?.sha || '',fp);
+    setBaseline(result?.content?.sha || result?.commit?.sha || '',fp);
     say('初始化完成 · 数据已加密上传');
   }
   async function downloadRemote(remote,password) {
@@ -176,7 +183,7 @@
       say('正在加密并上传本地更改…');
       const envelope=await encryptData(data,password);
       const result=await writeRemote(envelope,remote.sha);
-      setBaseline(result.content?.sha || '',fp);
+      setBaseline(result?.content?.sha || '',fp);
       say('同步完成 · '+new Date().toLocaleTimeString());
     } catch(err) { say(err.message || '同步失败',true); }
     finally { busy=false; }
