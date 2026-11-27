@@ -456,11 +456,11 @@ async function generatePlan(){
   const raw=await window.studyFlowAIRequest(systemPrompt,userPrompt);
   aiAdvice=parseAIJSON(raw);const recs=aiAdvice.items;if(!Array.isArray(recs)||recs.length!==items.length||!Array.isArray(aiAdvice.fixedEvents))throw new Error('AI 未完整返回任务分类或固定活动，已停止宽松排程。');
   const validKeys=new Set(items.map(i=>i.key)),seen=new Set();
-  for(const a of recs){const item=items.find(i=>i.key===a.key),rank=Number(a.rank),minutes=Number(a.minutes),kind=['study','fixed_event'].includes(a.kind)?a.kind:null,dayPreference=['sat','sun','either'].includes(a.dayPreference)?a.dayPreference:null,period=['morning','afternoon','evening','either'].includes(a.period)?a.period:null,blockMinutes=Number(a.blockMinutes);if(!item||seen.has(a.key)||!kind||!dayPreference||!period||!Number.isInteger(rank)||rank<1||!Number.isFinite(minutes)||!Number.isFinite(blockMinutes))throw new Error('AI 结果缺项或约束无效，已停止宽松排程。');seen.add(a.key);const maxMinutes=Math.max(15,Math.min(120,Number(item.estimate)||45));aiRank.set(a.key,{kind,rank,minutes:Math.max(15,Math.min(maxMinutes,minutes)),dayPreference,period,blockMinutes:Math.max(15,Math.min(75,blockMinutes)),reason:String(a.reason||'根据任务备注安排'),allowedWindows:Array.isArray(a.allowedWindows)?a.allowedWindows:[]})}
+  for(const [recIndex,a] of recs.entries()){const item=items.find(i=>i.key===a.key),rank=recIndex+1,minutes=Number(a.minutes),kind=['study','fixed_event'].includes(a.kind)?a.kind:null,dayPreference=['sat','sun','either'].includes(a.dayPreference)?a.dayPreference:null,period=['morning','afternoon','evening','either'].includes(a.period)?a.period:null,blockMinutes=Number(a.blockMinutes);if(!item||seen.has(a.key)||!kind||!dayPreference||!period||!Number.isInteger(rank)||rank<1||!Number.isFinite(minutes)||!Number.isFinite(blockMinutes))throw new Error('AI 结果缺项或约束无效，已停止宽松排程。');seen.add(a.key);const maxMinutes=Math.max(15,Math.min(120,Number(item.estimate)||45));aiRank.set(a.key,{kind,rank,minutes:Math.max(15,Math.min(maxMinutes,minutes)),dayPreference,period,blockMinutes:Math.max(15,Math.min(75,blockMinutes)),reason:String(a.reason||'根据任务备注安排'),allowedWindows:Array.isArray(a.allowedWindows)?a.allowedWindows:[]})}
   for(const item of items){const a=aiRank.get(item.key);if(!a)continue;const source=(item.name+' '+(item.note||item.description||'')).trim();const day=/星期六|周六|Saturday|\bSat\b/i.test(source)?'sat':/星期日|周日|Sunday|\bSun\b/i.test(source)?'sun':null;const period=/早上|上午|清晨|早晨/.test(source)?'morning':/下午/.test(source)?'afternoon':/晚上|夜间/.test(source)?'evening':null;const ranges=[...source.matchAll(/(\d{1,2}:\d{2})\s*[-—~至到]\s*(\d{1,2}:\d{2})/g)].map(m=>({start:m[1].padStart(5,'0'),end:m[2].padStart(5,'0')}));if(day)a.dayPreference=day;if(period)a.period=period;const isEvent=/上课|补习|培训|出门|出去|外出|聚会|约会|运动|爬山|旅行|旅游|看电影|比赛|演出|休息|吃饭/.test(source);if(ranges.length&&!isEvent){const h=Number(ranges[0].start.slice(0,2));a.period=h<12?'morning':h<18?'afternoon':'evening';}if(isEvent&&(day||ranges.length)){a.kind='fixed_event';const eventDay=day||(a.dayPreference!=='either'?a.dayPreference:null);if(!eventDay)throw new Error('任务“'+item.name+'”备注包含固定活动但没有明确星期，请补充星期后再生成。');const windows=ranges.length?ranges:[{start:period==='morning'?'06:00':period==='afternoon'?'12:00':period==='evening'?'18:00':'00:00',end:period==='morning'?'12:00':period==='afternoon'?'18:00':period==='evening'?'23:59':'23:59'}];aiAdvice.fixedEvents=aiAdvice.fixedEvents.filter(e=>e.key!==item.key).concat(windows.map(w=>({key:item.key,day:eventDay,start:w.start,end:w.end,name:item.name,reason:'根据待办备注中的固定活动及时间约束锁定'})));}else if(ranges.length){const windowDay=day||(a.dayPreference!=='either'?a.dayPreference:null);if(!windowDay)throw new Error('任务“'+item.name+'”备注写明具体时间，但未能确定星期，请补充星期后再生成。');a.allowedWindows=ranges.map(w=>({day:windowDay,start:w.start,end:w.end}));} }
   if(seen.size!==validKeys.size||[...aiRank.entries()].some(([key,v])=>v.kind==='fixed_event'&&!aiAdvice.fixedEvents.some(e=>e.key===key)))throw new Error('AI 未覆盖所有固定活动，已停止排程。');
   for(const ev of aiAdvice.fixedEvents){if(!validKeys.has(ev.key)||!['sat','sun'].includes(ev.day)||!/^\d{2}:\d{2}$/.test(ev.start)||!/^\d{2}:\d{2}$/.test(ev.end)||mins(ev.end)<=mins(ev.start))throw new Error('AI 提取的固定活动时间无效，已停止排程。');}
-  const ranks=[...aiRank.values()].map(v=>v.rank);if(new Set(ranks).size!==ranks.length)throw new Error('AI 排序编号重复，已停止排程。');
+  // AI 返回的 rank 可能重复；以上已按返回顺序重新编号，不中断排程。
   status.textContent='AI 已逐条解析任务备注、提取固定活动并完成约束检查，正在生成时间表…';
  }catch(e){status.textContent='AI 排程未通过约束校验，未生成时间表：'+e.message;toast('AI 排程失败，请检查 AI 返回内容后重试');return}}
  else if($('plannerAIStatus'))$('plannerAIStatus').textContent='未启用 AI，使用 STUDY FLOW 原有规则生成计划。';
@@ -517,8 +517,71 @@ function renderPlanOutput(){
  let p=generatedPlan;if(!p){$('planOutput').innerHTML='<div class="empty">尚未生成计划。</div>';return}
  let study=p.items.filter(x=>x.type==='study'),total=study.reduce((a,x)=>a+x.end-x.start,0),dates=p.dates;
  $('planSummary').textContent=`${study.length} 个时间块 · ${fmtDuration(total)} 学习 · 留有自由时间`;
- $('planOutput').innerHTML=`<div class="day-columns">${['sat','sun'].map((d,i)=>{let arr=p.items.filter(x=>x.day===d);return `<div class="day-card"><div class="day-head"><strong>${i?'星期日':'星期六'}</strong><span class="tag blue">${dates[i]}</span></div>${arr.length?arr.map(x=>`<div class="slot"><div class="slot-time">${timeStr(x.start)}—${timeStr(x.end)}</div><div class="slot-body ${x.type==='break'?'break':''} ${x.type==='event'?'event':''} ${x.status==='done'?'done':''}"><div class="slot-title">${esc(x.itemName)}</div><div class="slot-meta">${x.type==='break'?'休息时间':x.type==='event'?'固定活动':`${esc(x.subject)} · ${x.end-x.start} 分钟`}</div>${(x.type==='study'||x.type==='event')&&x.aiReason?`<div class="slot-meta">AI 依据：${esc(x.aiReason)}</div>`:''}${x.type==='study'?`<div class="slot-actions"><button class="btn small" onclick="editPlanSlot('${x.id}')">调整</button><button class="btn small danger" onclick="removePlanSlot('${x.id}')">移除</button></div>`:''}</div></div>`).join(''):'<div class="empty">暂未安排学习任务，保留为自由时间。</div>'}</div>`}).join('')}</div>${p.unallocated.length?`<div class="review-box" style="margin-top:12px"><b>尚未完整安排：</b>${p.unallocated.map(x=>`${esc(x.name)}（约 ${x.minutes} 分钟）`).join('、')}。可以减少任务量或调整可用时间。</div>`:''}<div class="review-box" style="margin-top:12px">空白时间就是自由时间，不需要为了填满时间表而增加任务。保存后可在「学习执行」中使用。</div>`;
+ $('planOutput').innerHTML=`<div class="day-columns">${['sat','sun'].map((d,i)=>{let arr=p.items.filter(x=>x.day===d);return `<div class="day-card"><div class="day-head"><strong>${i?'星期日':'星期六'}</strong><span class="tag blue">${dates[i]}</span></div>${arr.length?arr.map(x=>`<div class="slot"><div class="slot-time">${timeStr(x.start)}—${timeStr(x.end)}</div><div class="slot-body ${x.type==='break'?'break':''} ${x.type==='event'?'event':''} ${x.status==='done'?'done':''}"><div class="slot-title">${esc(x.itemName)}</div><div class="slot-meta">${x.type==='break'?'休息时间':x.type==='event'?'固定活动':`${esc(x.subject)} · ${x.end-x.start} 分钟`}</div>${(x.type==='study'||x.type==='event')&&x.aiReason?`<div class="slot-meta">AI 依据：${esc(x.aiReason)}</div>`:''}${x.type==='study'?`<div class="slot-actions"><button class="btn small" onclick="editPlanSlot('${x.id}')">调整</button><button class="btn small danger" onclick="removePlanSlot('${x.id}')">移除</button></div>`:''}</div></div>`).join(''):'<div class="empty">暂未安排学习任务，保留为自由时间。</div>'}</div>`}).join('')}</div>${p.unallocated.length?`<div class="review-box" style="margin-top:12px"><b>尚未完整安排：</b>${p.unallocated.map(x=>`${esc(x.name)}（约 ${x.minutes} 分钟）`).join('、')}。可以减少任务量或调整可用时间。</div>`:''}<div class="review-box" style="margin-top:12px"><b>让 AI 直接调整这份时间表</b><div class="task-meta" style="margin:6px 0">AI 可以移动、拆分、合并、增减学习时间块并重新排序；固定活动和备注中的时间限制不可更改。AI 修改后先由你检查，点击保存才会写入数据。</div><textarea id="aiPlanInstruction" rows="2" placeholder="例如：把数学放到周六上午，英语拆成两个时间块，周日下午留出更多休息时间。"></textarea><button class="btn small primary" style="margin-top:8px" onclick="aiRevisePlan()">✦ 让 AI 直接修改排程</button></div><div class="review-box" style="margin-top:12px">空白时间就是自由时间，不需要为了填满时间表而增加任务。保存后可在「学习执行」中使用。</div>`;
 }
+
+async function aiRevisePlan(){
+ if(!generatedPlan){toast('请先生成一份周末计划');return}
+ if(typeof window.studyFlowAIRequest!=='function'){toast('AI 模块尚未加载，请刷新页面');return}
+ const selected=selectedItems();if(!selected.length){toast('请先确认本次计划选中的待办任务');return}
+ const currentFixed=generatedPlan.items.filter(x=>x.type==='event');
+ const fixedKeys=new Set(currentFixed.map(x=>x.itemKey).filter(Boolean));
+ const activityPattern=/上课|补习|培训|出门|出去|外出|聚会|约会|运动|爬山|旅行|旅游|看电影|比赛|演出|休息|吃饭/;
+ const studyTasks=selected.filter(x=>!fixedKeys.has(x.key)&&!activityPattern.test((x.name+' '+(x.note||x.description||''))));
+ const instruction=$('aiPlanInstruction')?.value.trim()||'请根据待办名称和备注，重新审视并优化整个周末学习时间表。';
+ const status=$('plannerAIStatus');if(status)status.textContent='AI 正在直接重排现有时间表…';
+ const config=generatedPlan.config;
+ const payload={
+  instruction,
+  tasks:studyTasks.map(x=>({key:x.key,name:x.name,note:x.note||x.description||'',estimate:x.estimate})),
+  currentSchedule:generatedPlan.items.filter(x=>x.type==='study').map(x=>({key:x.itemKey,day:x.day,start:timeStr(x.start),end:timeStr(x.end),reason:x.aiReason||''})),
+  fixedEvents:currentFixed.map(x=>({day:x.day,start:timeStr(x.start),end:timeStr(x.end),name:x.itemName})),
+  availability:{saturday:[timeStr(config.satStart),timeStr(config.satEnd)],sunday:[timeStr(config.sunStart),timeStr(config.sunEnd)],lunch:[timeStr(config.breakStart),timeStr(config.breakEnd)],blocked:config.blocked}
+ };
+ const system='你是 STUDY FLOW 的自主周末排程代理。你拥有对学习时间表的直接编辑权限：可以移动任务、调整时长、拆分任务为多个时间块、合并过碎的时间块、改变任务顺序、删除不合理的学习安排并把任务标记为未安排。你必须真正重新设计时间表，而不是只给建议。你的首要依据是每项待办的名称和备注，逐字理解用户表达的活动、星期、时段、钟点和限制。用户备注里的时间是硬约束，绝不可挪动。fixedEvents 是只读锁定项，绝不能修改、覆盖或安排学习任务与之重叠。只在 availability 指定的学习窗口内排课，不能与午休或 blocked 冲突。任务没有写时间限制时，你可以自主选择周六或周日、上午或下午。学习块建议15至75分钟，允许根据任务性质拆分；总时长不要无故超过任务预计时间。你可以将任务留空，但必须在 unallocatedKeys 中说明。请综合考虑任务语义、任务难度和相邻任务切换成本。只输出JSON，不要Markdown。';
+ const prompt='请直接返回完整的新学习排程，格式：{"blocks":[{"key":"输入任务key","day":"sat或sun","start":"09:00","end":"10:00","reason":"结合任务名称和备注说明安排依据"}],"unallocatedKeys":["未安排任务key"],"advice":"整体调整说明"}。每个时间块只能引用 tasks 中的 key；同一任务可以有多个时间块。每项任务必须至少出现在 blocks 或 unallocatedKeys 其中一处。不要返回固定活动，它们由程序原样保留。时间使用24小时制HH:mm。必须先检查全部时间块没有互相重叠、没有占用固定活动/午休/blocked，并严格遵守任务备注。\n输入：'+JSON.stringify(payload);
+ try{
+  const raw=await window.studyFlowAIRequest(system,prompt),result=parseAIJSON(raw);
+  if(!Array.isArray(result.blocks)||!Array.isArray(result.unallocatedKeys))throw new Error('AI 没有返回完整的新排程结构');
+  const byKey=new Map(studyTasks.map(x=>[x.key,x])),seen=new Set(),blocks=[];
+  const toTime=v=>{if(typeof v!=='string'||!/^\\d{2}:\\d{2}$/.test(v))throw new Error('AI 返回了无效时间：'+v);const n=mins(v);if(n<0||n>=1440)throw new Error('AI 返回的时间超出一天范围');return n};
+  const fixed=currentFixed.map(x=>({day:x.day,start:x.start,end:x.end,name:x.itemName}));
+  for(const b of result.blocks){
+   const task=byKey.get(b.key);if(!task)throw new Error('AI 引用了未选择的任务：'+b.key);
+   const day=b.day;if(!['sat','sun'].includes(day))throw new Error('AI 返回了无效日期');
+   const start=toTime(b.start),end=toTime(b.end),duration=end-start;
+   if(duration<15||duration>120)throw new Error('单个学习块必须在15至120分钟之间');
+   const dayStart=config[day+'Start'],dayEnd=config[day+'End'];
+   if(start<dayStart||end>dayEnd)throw new Error('任务“'+task.name+'”超出'+(day==='sat'?'周六':'周日')+'可用时间');
+   const source=(task.name+' '+(task.note||task.description||'')).trim();
+   const requiredDay=/星期六|周六|Saturday|\\bSat\\b/i.test(source)?'sat':/星期日|周日|Sunday|\\bSun\\b/i.test(source)?'sun':null;
+   const period=/早上|上午|清晨|早晨/.test(source)?'morning':/下午/.test(source)?'afternoon':/晚上|夜间/.test(source)?'evening':null;
+   if(requiredDay&&day!==requiredDay)throw new Error('任务“'+task.name+'”违反备注中的星期限制');
+   const clockPeriod=start<720?'morning':start<1080?'afternoon':'evening';
+   if(period&&clockPeriod!==period)throw new Error('任务“'+task.name+'”违反备注中的时段限制');
+   const ranges=[...source.matchAll(/(\\d{1,2}:\\d{2})\\s*[-—~至到]\\s*(\\d{1,2}:\\d{2})/g)].map(m=>({start:mins(m[1].padStart(5,'0')),end:mins(m[2].padStart(5,'0'))}));
+   if(ranges.length&&!ranges.some(w=>start>=w.start&&end<=w.end))throw new Error('任务“'+task.name+'”没有安排在备注指定的具体时间范围内');
+   const forbidden=[...(config.blocked[day]||[])];if(config.breakEnd>config.breakStart)forbidden.push([config.breakStart,config.breakEnd]);
+   for(const ev of fixed.filter(x=>x.day===day))forbidden.push([ev.start,ev.end]);
+   if(forbidden.some(([a,z])=>start<z&&end>a))throw new Error('任务“'+task.name+'”与午休、固定活动或不可安排时段冲突');
+   if(blocks.some(x=>x.day===day&&start<x.end&&end>x.start))throw new Error('AI 新排程中存在时间重叠');
+   blocks.push({id:uid(),day,start,end,type:'study',itemKey:task.key,itemName:task.name,subject:task.subject||'',estimate:duration,status:'pending',resourceName:task.resourceName||'',questions:task.questions||0,pages:task.pages||0,aiReason:String(b.reason||'AI 根据待办名称和备注自主调整')});
+   seen.add(task.key);
+  }
+  const unallocated=new Set(result.unallocatedKeys);
+  for(const key of unallocated)if(!byKey.has(key))throw new Error('AI 未安排清单包含未知任务');
+  for(const key of byKey.keys())if(!seen.has(key)&&!unallocated.has(key))throw new Error('AI 遗漏了任务：'+byKey.get(key).name);
+  for(const key of seen)if(unallocated.has(key))throw new Error('AI 同时安排并标记未安排了同一任务');
+  const next=[...fixed.map(x=>generatedPlan.items.find(y=>y.type==='event'&&y.day===x.day&&y.start===x.start&&y.end===x.end&&y.itemName===x.name)),...blocks].filter(Boolean).sort((a,b)=>a.day.localeCompare(b.day)||a.start-b.start);
+  const withBreak=[];for(const day of ['sat','sun']){const arr=next.filter(x=>x.day===day);for(let i=0;i<arr.length;i++){withBreak.push(arr[i]);if(i<arr.length-1&&arr[i+1].start-arr[i].end>=8&&arr[i+1].start-arr[i].end<=20)withBreak.push({id:uid(),day,start:arr[i].end,end:arr[i].end+10,type:'break',itemName:'短暂休息',subject:'休息',status:'pending'});}}
+  generatedPlan.items=withBreak.sort((a,b)=>a.day.localeCompare(b.day)||a.start-b.start);
+  generatedPlan.unallocated=[...unallocated].map(key=>({name:byKey.get(key).name,minutes:byKey.get(key).estimate||45}));
+  generatedPlan.aiRevisedAt=Date.now();generatedPlan.aiAdvice=result.advice||'AI 已直接调整时间表';
+  renderPlanOutput();if(status)status.textContent='AI 已直接修改时间表。请检查结果，确认后点击「保存计划」写入你的学习数据。';
+  toast('AI 已直接重排时间表，请检查后保存');
+ }catch(e){if(status)status.textContent='AI 调整未应用：'+e.message;toast('AI 调整未应用：'+e.message)}
+}
+
 function editPlanSlot(id){let x=generatedPlan.items.find(z=>z.id===id);if(!x)return;openModal('调整时间块',`<form id="slotForm"><div class="field"><label>学习日期</label><select name="day"><option value="sat" ${x.day==='sat'?'selected':''}>星期六</option><option value="sun" ${x.day==='sun'?'selected':''}>星期日</option></select></div><div class="form-grid"><div class="field"><label>开始时间</label><input type="time" name="start" value="${timeStr(x.start)}" required></div><div class="field"><label>结束时间</label><input type="time" name="end" value="${timeStr(x.end)}" required></div></div><div class="actions"><button class="btn primary">保存调整</button></div></form>`);$('slotForm').onsubmit=e=>{e.preventDefault();let f=new FormData(e.target),start=mins(f.get('start')),end=mins(f.get('end'));if(end<=start){toast('结束时间必须晚于开始时间');return}let collision=generatedPlan.items.some(y=>y.id!==id&&y.day===f.get('day')&&start<y.end&&end>y.start);if(collision){toast('这个时间段与其他安排重叠');return}x.day=f.get('day');x.start=start;x.end=end;x.estimate=end-start;closeModal();renderPlanOutput()}}
 function removePlanSlot(id){if(!confirm('从计划中移除这个时间块？'))return;generatedPlan.items=generatedPlan.items.filter(x=>x.id!==id);renderPlanOutput()}
 async function savePlan(){if(!generatedPlan){toast('请先生成计划');return}let existing=state.plans.find(p=>p.dates?.[0]===generatedPlan.dates[0]);if(existing){if(!confirm('本周末已有保存的计划，是否覆盖？'))return;await remove('plans',existing.id)}generatedPlan.saved=true;await persist('plans',generatedPlan);renderAll();toast('周末计划已保存')}
