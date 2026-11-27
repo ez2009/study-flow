@@ -522,16 +522,20 @@ window.studyFlowConfigureWeekend=async function(config={}){
  if(config.mode&&['balanced','weak','urgent','exam'].includes(config.mode))$('planMode').value=config.mode;
  if(typeof config.blocked==='string')$('blocked').value=config.blocked;
  const requested=Array.isArray(config.taskIds)?new Set(config.taskIds.map(String)):null;
+ renderPlannerChoices();
  if(requested){
   document.querySelectorAll('.plan-select').forEach(el=>{
    const raw=el.value, id=raw.startsWith('task:')?raw.slice(5):raw.startsWith('ch:')?raw.slice(3):raw;
    el.checked=requested.has(raw)||requested.has(id);
   });
+ }else{
+  document.querySelectorAll('.plan-select').forEach(el=>{el.checked=el.value.startsWith('task:')&&state.tasks.some(t=>t.id===el.value.slice(5)&&t.status!=='done');});
  }
  $('plannerAIAssist').checked=config.useAI!==false;
  if(typeof navigate==='function')navigate('planner');
+ const previous=generatedPlan?.createdAt||0;
  await generatePlan();
- return !!generatedPlan;
+ return !!generatedPlan&&(generatedPlan.createdAt||0)!==previous;
 };
 
 function renderPlanOutput(){
