@@ -119,7 +119,6 @@
         tx.onabort=()=>reject(tx.error || new Error('本地数据替换已取消，原数据未完成替换。'));
       });
     } finally { db.close(); }
-    location.reload();
   }
   const fingerprint = data => JSON.stringify(STORES.map(k=>data[k]||[]));
   function baseline() { try{return JSON.parse(localStorage.getItem(BASELINE_KEY)||'null')}catch{return null} }
@@ -135,8 +134,10 @@
   }
   async function downloadRemote(remote,password) {
     const data=await decryptData(remote.envelope,password);
-    setBaseline(remote.sha,fingerprint(data));
     await replaceLocal(data);
+    // Only advance the sync baseline after the complete local transaction succeeds.
+    setBaseline(remote.sha,fingerprint(data));
+    location.reload();
   }
   async function syncNow(mode='normal') {
     if (busy) return;
