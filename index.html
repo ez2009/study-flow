@@ -76,6 +76,16 @@ html[data-theme="dark"] .mobile-nav button{color:#aebdcb}html[data-theme="dark"]
 .ai-layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:15px;align-items:start}.ai-chat{min-height:480px;display:flex;flex-direction:column}.ai-messages{flex:1;min-height:320px;max-height:58vh;overflow:auto;padding:4px 2px 14px}.ai-message{max-width:88%;padding:11px 13px;border-radius:13px;margin:9px 0;font-size:13px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}.ai-message.user{margin-left:auto;background:var(--primary-2);color:var(--text)}.ai-message.assistant{background:var(--surface-2);color:var(--text)}.ai-composer{display:flex;gap:8px;align-items:flex-end;border-top:1px solid var(--line);padding-top:12px}.ai-composer textarea{flex:1;min-height:44px;max-height:140px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface);color:var(--text)}.ai-hint{font-size:11px;color:var(--muted);line-height:1.6}.ai-chip{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:20px;padding:7px 10px;font-size:11px}.settings-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.settings-row:last-child{border-bottom:0}
 @media(max-width:800px){.ai-layout{grid-template-columns:1fr}.ai-side{order:-1}.ai-chat{min-height:430px}.ai-messages{max-height:48vh}}
 
+
+/* 首页周末计划概览：紧凑的双日时长图 */
+.weekend-mini-chart{margin:12px 0 10px;padding:11px 12px;background:var(--surface-2);border-radius:10px}
+.weekend-mini-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font-size:11px;color:var(--muted)}
+.weekend-mini-row{display:grid;grid-template-columns:42px minmax(0,1fr) 65px;align-items:center;gap:8px;margin:9px 0}
+.weekend-mini-day{font-size:11px;font-weight:650;color:var(--text)}
+.weekend-mini-track{height:8px;background:var(--line);border-radius:20px;overflow:hidden}
+.weekend-mini-fill{height:100%;border-radius:20px;background:#6d9fc4;min-width:2px}
+.weekend-mini-value{text-align:right;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.weekend-mini-foot{display:flex;justify-content:space-between;gap:8px;margin-top:10px;font-size:10px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -641,8 +651,23 @@ async function aiRevisePlan(){
 
 function editPlanSlot(id){let x=generatedPlan.items.find(z=>z.id===id);if(!x)return;openModal('调整时间块',`<form id="slotForm"><div class="field"><label>学习日期</label><select name="day"><option value="sat" ${x.day==='sat'?'selected':''}>星期六</option><option value="sun" ${x.day==='sun'?'selected':''}>星期日</option></select></div><div class="form-grid"><div class="field"><label>开始时间</label><input type="time" name="start" value="${timeStr(x.start)}" required></div><div class="field"><label>结束时间</label><input type="time" name="end" value="${timeStr(x.end)}" required></div></div><div class="actions"><button class="btn primary">保存调整</button></div></form>`);$('slotForm').onsubmit=e=>{e.preventDefault();let f=new FormData(e.target),start=mins(f.get('start')),end=mins(f.get('end'));if(end<=start){toast('结束时间必须晚于开始时间');return}let collision=generatedPlan.items.some(y=>y.id!==id&&y.day===f.get('day')&&start<y.end&&end>y.start);if(collision){toast('这个时间段与其他安排重叠');return}x.day=f.get('day');x.start=start;x.end=end;x.estimate=end-start;closeModal();renderPlanOutput()}}
 function removePlanSlot(id){if(!confirm('从计划中移除这个时间块？'))return;generatedPlan.items=generatedPlan.items.filter(x=>x.id!==id);renderPlanOutput()}
-async function savePlan(){if(!generatedPlan){toast('请先生成计划');return}let existing=state.plans.find(p=>p.dates?.[0]===generatedPlan.dates[0]);if(existing){if(!confirm('本周末已有保存的计划，是否覆盖？'))return;await remove('plans',existing.id)}generatedPlan.saved=true;await persist('plans',generatedPlan);renderAll();toast('周末计划已保存')}
-function latestPlan(){return state.plans.slice().sort((a,b)=>b.createdAt-a.createdAt)[0]}
+async function savePlan(){
+ if(!generatedPlan){toast('请先生成计划');return}
+ const existing=state.plans.find(p=>p.dates?.[0]===generatedPlan.dates?.[0]);
+ if(existing&&existing.id!==generatedPlan.id&&!confirm('本周末已有保存的计划，是否覆盖？'))return;
+ // 先写入新版本，再更新内存状态；不再先删除旧计划，避免写入失败导致旧数据丢失。
+ const savedPlan={...generatedPlan,id:existing?.id||generatedPlan.id,saved:true,updatedAt:Date.now()};
+ try{
+  await persist('plans',savedPlan);
+  generatedPlan=JSON.parse(JSON.stringify(savedPlan));
+  renderAll();
+  toast('周末计划已保存，可在首页查看概览');
+ }catch(error){
+  console.error('保存周末计划失败',error);
+  toast('保存失败：本地数据库写入未成功，请重试');
+ }
+}
+function latestPlan(){return state.plans.filter(p=>p.saved!==false).slice().sort((a,b)=>(b.updatedAt||b.createdAt||0)-(a.updatedAt||a.createdAt||0))[0]||null}
 function renderSession(){
  let p=latestPlan(),today=todayISO(),todayDay=p?.dates?.[0]===today?'sat':p?.dates?.[1]===today?'sun':null;
  if(activeSession){let task=state.tasks.find(t=>t.id===activeSession.taskId);$('currentTask').innerHTML=`<div class="review-box"><div class="tag green">计时中</div><h2 style="font-size:18px">${esc(activeSession.name)}</h2><div id="timerDisplay" style="font-size:34px;font-weight:800;text-align:center;margin:18px 0">00:00:00</div><div class="actions"><button class="btn" onclick="pauseTimer()">暂停计时</button><button class="btn primary" onclick="finishSession()">结束并记录</button></div></div>`}
@@ -665,7 +690,7 @@ function renderDashboard(){
  $('stat-hours').textContent=hours.toFixed(1)+'h';$('stat-done').textContent=done;$('stat-pending').textContent=pending;$('stat-books').textContent=state.resources.length;
  let upcoming=state.tasks.filter(t=>t.status!=='done').sort((a,b)=>scoreItem(b,'balanced')-scoreItem(a,'balanced')).slice(0,5);
  $('dashboardTasks').innerHTML=upcoming.length?upcoming.map(t=>`<div class="task-row"><input class="check" type="checkbox" onchange="toggleTask('${t.id}')"><div class="task-main"><div class="task-name">${esc(t.name)}</div><div class="task-meta">${esc(t.subject)} · ${t.estimate} 分钟</div></div><span class="tag ${t.priority===1?'red':'blue'}">${t.priority===1?'高优先级':'待完成'}</span></div>`).join(''):'<div class="empty">目前没有待办任务。你可以添加一项学习任务。</div>';
- let p=latestPlan();$('weekendLabel').textContent=p?p.dates.join(' / '):'尚未安排';$('dashboardPlan').innerHTML=p?`<div class="stat-value" style="font-size:24px">${fmtDuration(p.items.filter(x=>x.type==='study').reduce((a,x)=>a+x.end-x.start,0))}</div><div class="sub">计划学习时间</div><div style="margin:13px 0"><div class="task-meta">星期六 · ${p.items.filter(x=>x.day==='sat'&&x.type==='study').length} 个学习时间块</div><div class="task-meta">星期日 · ${p.items.filter(x=>x.day==='sun'&&x.type==='study').length} 个学习时间块</div></div><button class="btn soft small" onclick="navigatePlanner()">查看与调整计划</button>`:'<div class="empty">还没有保存的周末计划。<br><button class="btn soft small" style="margin-top:10px" onclick="navigatePlanner()">去生成计划</button></div>';
+ let p=latestPlan();$('weekendLabel').textContent=p?p.dates.join(' / '):'尚未安排';const dayStats=['sat','sun'].map((day,i)=>{const blocks=p?p.items.filter(x=>x.day===day&&x.type==='study'):[];return {label:i?'星期日':'星期六',minutes:blocks.reduce((sum,x)=>sum+Math.max(0,x.end-x.start),0),count:blocks.length}});const maxMinutes=Math.max(1,...dayStats.map(x=>x.minutes));const dayRows=dayStats.map(x=>'<div class="weekend-mini-row"><span class="weekend-mini-day">'+x.label+'</span><div class="weekend-mini-track"><div class="weekend-mini-fill" style="width:'+x.minutes/maxMinutes*100+'%"></div></div><span class="weekend-mini-value">'+fmtDuration(x.minutes)+'</span></div>').join('');$('dashboardPlan').innerHTML=p?'<div class="stat-value" style="font-size:23px">'+fmtDuration(dayStats.reduce((sum,x)=>sum+x.minutes,0))+'</div><div class="sub">本周末计划学习时间</div><div class="weekend-mini-chart"><div class="weekend-mini-head"><span>每日学习时长</span><span>'+((p.dates||[]).join(' / '))+'</span></div>'+dayRows+'<div class="weekend-mini-foot"><span>共 '+dayStats.reduce((sum,x)=>sum+x.count,0)+' 个学习时间块</span><span>已保存计划</span></div></div><button class="btn soft small" onclick="navigatePlanner()">查看与调整计划</button>':'<div class="empty">还没有保存的周末计划。<br><button class="btn soft small" style="margin-top:10px" onclick="navigatePlanner()">去生成计划</button></div>';
 }
 function renderReview(){
  let seconds=state.sessions.reduce((a,s)=>a+(s.seconds||0),0),done=state.tasks.filter(t=>t.status==='done').length,rate=state.tasks.length?Math.round(done/state.tasks.length*100):0,questions=state.sessions.reduce((a,s)=>a+(s.questions||0),0),pages=state.sessions.reduce((a,s)=>a+(s.pages||0),0);
@@ -681,7 +706,7 @@ function exportData(){let data={app:'STUDY FLOW',version:1,exportedAt:new Date()
 async function importData(e){let file=e.target.files[0];if(!file)return;try{let data=JSON.parse(await file.text());if(data.app!=='STUDY FLOW'||!Array.isArray(data.resources)||!Array.isArray(data.tasks))throw new Error('文件格式不正确');if(!confirm('导入将覆盖当前本地数据，建议先导出备份。确定继续吗？'))return;for(let k of ['resources','tasks','plans','sessions','reviews','settings']){await dbClear(k);state[k]=Array.isArray(data[k])?data[k]:[];for(let obj of state[k])await dbPut(k,obj)}renderAll();toast('数据恢复成功')}catch(err){alert('导入失败：'+err.message)}e.target.value=''}
 async function clearAllData(){if(!confirm('确定清空当前浏览器中的全部 STUDY FLOW 数据？此操作无法撤销，请先备份。'))return;if(!confirm('再次确认：所有资料、任务、计划和记录都会被删除。'))return;for(let k of ['resources','tasks','plans','sessions','reviews','settings']){await dbClear(k);state[k]=[]}generatedPlan=null;renderAll();toast('本地数据已清空')}
 function initDate(){let d=new Date();$('todayText').textContent=d.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});let h=d.getHours();$('greeting').textContent=h<11?'早上好，今天也向目标迈进一步。':h<18?'下午好，今天也向目标迈进一步。':'晚上好，给今天一个轻松的收尾。';let dates=weekendDates();$('weekendLabel').textContent=dates.join(' / ')}
-(async function init(){try{db=await openDB();await loadState();await initWeekendRoutineMemory();initDate();renderAll()}catch(e){console.error(e);alert('本地数据库初始化失败。请使用较新的 Chrome、Edge、Safari 或 Firefox 浏览器，并避免在隐私浏览模式下运行。')}})();
+(async function init(){try{db=await openDB();await loadState();const savedPlan=latestPlan();if(savedPlan)generatedPlan=JSON.parse(JSON.stringify(savedPlan));await initWeekendRoutineMemory();initDate();renderAll()}catch(e){console.error(e);alert('本地数据库初始化失败。请使用较新的 Chrome、Edge、Safari 或 Firefox 浏览器，并避免在隐私浏览模式下运行。')}})();
 </script>
 <script src="./theme.js"></script>
 <script src="./ai.js"></script>
