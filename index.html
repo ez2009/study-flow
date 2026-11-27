@@ -544,7 +544,7 @@ async function aiRevisePlan(){
   const raw=await window.studyFlowAIRequest(system,prompt),result=parseAIJSON(raw);
   if(!Array.isArray(result.blocks)||!Array.isArray(result.unallocatedKeys))throw new Error('AI 没有返回完整的新排程结构');
   const byKey=new Map(studyTasks.map(x=>[x.key,x])),seen=new Set(),blocks=[];
-  const toTime=v=>{if(typeof v!=='string'||!/^\\d{2}:\\d{2}$/.test(v))throw new Error('AI 返回了无效时间：'+v);const n=mins(v);if(n<0||n>=1440)throw new Error('AI 返回的时间超出一天范围');return n};
+  const toTime=v=>{if(typeof v!=='string'||!/^\d{2}:\d{2}$/.test(v))throw new Error('AI 返回了无效时间：'+v);const n=mins(v);if(n<0||n>=1440)throw new Error('AI 返回的时间超出一天范围');return n};
   const fixed=currentFixed.map(x=>({day:x.day,start:x.start,end:x.end,name:x.itemName}));
   for(const b of result.blocks){
    const task=byKey.get(b.key);if(!task)throw new Error('AI 引用了未选择的任务：'+b.key);
@@ -554,12 +554,12 @@ async function aiRevisePlan(){
    const dayStart=config[day+'Start'],dayEnd=config[day+'End'];
    if(start<dayStart||end>dayEnd)throw new Error('任务“'+task.name+'”超出'+(day==='sat'?'周六':'周日')+'可用时间');
    const source=(task.name+' '+(task.note||task.description||'')).trim();
-   const requiredDay=/星期六|周六|Saturday|\\bSat\\b/i.test(source)?'sat':/星期日|周日|Sunday|\\bSun\\b/i.test(source)?'sun':null;
+   const requiredDay=/星期六|周六|Saturday|\bSat\b/i.test(source)?'sat':/星期日|周日|Sunday|\bSun\b/i.test(source)?'sun':null;
    const period=/早上|上午|清晨|早晨/.test(source)?'morning':/下午/.test(source)?'afternoon':/晚上|夜间/.test(source)?'evening':null;
    if(requiredDay&&day!==requiredDay)throw new Error('任务“'+task.name+'”违反备注中的星期限制');
    const clockPeriod=start<720?'morning':start<1080?'afternoon':'evening';
    if(period&&clockPeriod!==period)throw new Error('任务“'+task.name+'”违反备注中的时段限制');
-   const ranges=[...source.matchAll(/(\\d{1,2}:\\d{2})\\s*[-—~至到]\\s*(\\d{1,2}:\\d{2})/g)].map(m=>({start:mins(m[1].padStart(5,'0')),end:mins(m[2].padStart(5,'0'))}));
+   const ranges=[...source.matchAll(/(\d{1,2}:\d{2})\s*[-—~至到]\s*(\d{1,2}:\d{2})/g)].map(m=>({start:mins(m[1].padStart(5,'0')),end:mins(m[2].padStart(5,'0'))}));
    if(ranges.length&&!ranges.some(w=>start>=w.start&&end<=w.end))throw new Error('任务“'+task.name+'”没有安排在备注指定的具体时间范围内');
    const forbidden=[...(config.blocked[day]||[])];if(config.breakEnd>config.breakStart)forbidden.push([config.breakStart,config.breakEnd]);
    for(const ev of fixed.filter(x=>x.day===day))forbidden.push([ev.start,ev.end]);
