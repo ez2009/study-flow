@@ -1,4 +1,4 @@
-const CACHE_NAME = 'study-flow-v2-shell-3';
+const CACHE_NAME = 'study-flow-v2-shell-4';
 const APP_SHELL = [
   './',
   './index.html',
