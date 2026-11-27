@@ -372,7 +372,7 @@ function openTaskModal(id=null){
  <div class="field"><label>重要程度</label><select name="importance"><option value="1" ${t?.importance==1?'selected':''}>重要</option><option value="0" ${t?.importance===0?'selected':''}>不重要</option></select></div>
  <div class="field"><label>紧急程度</label><select name="urgent"><option value="1" ${t?.urgent==1?'selected':''}>紧急</option><option value="0" ${t?.urgent===0?'selected':''}>不紧急</option></select></div>
  <div class="field"><label>截止日期</label><input name="dueDate" type="date" value="${t?.dueDate||''}"></div>
- <div class="field full"><label>备注</label><textarea name="note">${esc(t?.note||'')}</textarea></div>
+ <div class="field full"><label>备注 / 任务简介</label><textarea name="note" placeholder="写清楚具体要做什么、任务范围、难点或老师的要求，AI 排程会结合这些内容判断。">${esc(t?.note||'')}</textarea></div>
  </div><div class="actions"><button class="btn primary">保存任务</button><button type="button" class="btn" onclick="closeModal()">取消</button></div></form>`);
  $('taskForm').onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target),obj={...(t||{}),id:t?.id||uid(),name:f.get('name').trim(),subject:f.get('subject'),resourceId:f.get('resourceId'),estimate:Math.max(5,+f.get('estimate')||45),totalQuestions:+f.get('totalQuestions')||0,doneQuestions:t?.doneQuestions||0,priority:+f.get('priority'),importance:+f.get('importance'),urgent:+f.get('urgent'),dueDate:f.get('dueDate'),note:f.get('note'),status:t?.status||'pending',createdAt:t?.createdAt||Date.now()};await persist('tasks',obj);closeModal();renderAll();toast('任务已保存')};
 }
@@ -430,7 +430,7 @@ function parseBlocked(){
 function selectedItems(){
  return [...document.querySelectorAll('.plan-select:checked')].map(el=>{
  let v=el.value,p=v.split(':');
- if(p[0]==='task'){let t=state.tasks.find(x=>x.id===p[1]);return t?{key:v,type:'task',refId:t.id,name:t.name,subject:t.subject,estimate:t.estimate,priority:t.priority,importance:t.importance,urgent:t.urgent,dueDate:t.dueDate||'',note:t.note||'',weakness:0,difficulty:1,questions:t.totalQuestions||0,pages:0}:null}
+ if(p[0]==='task'){let t=state.tasks.find(x=>x.id===p[1]);return t?{key:v,type:'task',refId:t.id,name:t.name,description:t.description||t.note||'',subject:t.subject,estimate:t.estimate,priority:t.priority,importance:t.importance,urgent:t.urgent,dueDate:t.dueDate||'',note:t.note||'',weakness:0,difficulty:1,questions:t.totalQuestions||0,pages:0}:null}
  let r=state.resources.find(x=>x.id===p[1]),c=r?.chapters.find(x=>x.id===p[2]);if(!r||!c)return null;
  let remainQ=Math.max(0,(c.totalQuestions||0)-(c.doneQuestions||0)),totalPages=Math.max(0,(c.endPage||0)-(c.startPage||0)+1),remainP=Math.max(0,totalPages-(c.donePages||0));
  if(remainQ===0&&remainP===0)return null;
@@ -448,61 +448,65 @@ async function generatePlan(){
  if(config.satEnd<=config.satStart||config.sunEnd<=config.sunStart){toast('请检查开始和结束时间');return}
  if(config.breakEnd<config.breakStart){toast('午间休息时间不正确');return}
  let aiAdvice=null,aiRank=new Map();
- if($('plannerAIAssist')?.checked){const status=$('plannerAIStatus');status.textContent='AI 正在分析任务优先级与时间分配…';try{
+ if($('plannerAIAssist')?.checked){const status=$('plannerAIStatus');status.textContent='AI 正在阅读任务名称、简介和备注，综合评估工作量与适合时段…';try{
   if(typeof window.studyFlowAIRequest!=='function')throw new Error('AI 模块尚未加载，请刷新页面。');
-  const payload={items:items.map(x=>({key:x.key,name:x.name,subject:x.subject,estimate:x.estimate,priority:x.priority,importance:x.importance,urgent:x.urgent,dueDate:x.dueDate||null,note:x.note||'',weakness:x.weakness,difficulty:x.difficulty,questions:x.questions,pages:x.pages})),available:{saturday:$('satStart').value+'-'+$('satEnd').value,sunday:$('sunStart').value+'-'+$('sunEnd').value,lunch:$('breakStart').value+'-'+$('breakEnd').value,blocked:$('blocked').value},intensity:config.intensity,preference:config.mode};
-  const raw=await window.studyFlowAIRequest('你是严谨的学习计划规划助手。只依据输入安排，重视明确截止日期、重要任务和薄弱科目；考虑周末可用时间、午休和固定活动。不得增加、删除或改名任务。只输出合法 JSON。','请为每一项所选内容给出唯一排序和建议学习分钟数。必须覆盖全部 key，rank 从 1 开始且不重复。minutes 不得超过该项原预计时间（最少按 15 分钟安排）。格式：{"items":[{"key":"原key","rank":1,"minutes":45,"reason":"简短理由"}],"advice":"一句总体建议"}。\\n数据：'+JSON.stringify(payload));
-   aiAdvice=parseAIJSON(raw);const recs=aiAdvice.items;if(!Array.isArray(recs)||recs.length!==items.length)throw new Error('AI 未覆盖全部学习内容，已改用原有排程。');
-   for(const itemAdvice of recs){const item=items.find(i=>i.key===itemAdvice.key),rank=Number(itemAdvice.rank),minutes=Number(itemAdvice.minutes);if(!item||aiRank.has(itemAdvice.key)||!Number.isInteger(rank)||rank<1||!Number.isFinite(minutes))throw new Error('AI 排程结果包含无效或重复项目，已改用原有排程。');const maxMinutes=Math.max(15,Math.min(120,Number(item.estimate)||45));aiRank.set(itemAdvice.key,{rank,minutes:Math.max(15,Math.min(maxMinutes,minutes)),reason:String(itemAdvice.reason||'')})}
-   const ranks=[...aiRank.values()].map(v=>v.rank);if(new Set(ranks).size!==ranks.length)throw new Error('AI 排序编号重复，已改用原有排程。');
-   status.textContent='AI 建议已生成，系统正在结合可用时间生成时间表。';
+  const payload={items:items.map(x=>({key:x.key,type:x.type==='task'?'独立待办':'教辅章节',name:x.name,description:x.description||x.note||'',note:x.note||'',subject:x.subject,resourceName:x.resourceName||'',estimate:x.estimate,priority:x.priority,importance:x.importance,urgent:x.urgent,dueDate:x.dueDate||null,weakness:x.weakness,difficulty:x.difficulty,remainingQuestions:x.questions,remainingPages:x.pages})),available:{saturday:$('satStart').value+'-'+$('satEnd').value,sunday:$('sunStart').value+'-'+$('sunEnd').value,lunch:$('breakStart').value+'-'+$('breakEnd').value,blocked:$('blocked').value},intensity:config.intensity,preference:config.mode};
+  const systemPrompt='你是一名细致、审慎的个性化学习计划师。你必须真正阅读每项任务的名称、备注/简介和所属科目，理解任务究竟要做什么，再判断难度、认知负荷、准备成本、紧迫程度和适合安排的时段。不能按输入顺序照抄，也不能把所有任务机械地连续堆在周六上午。独立待办和教辅章节同等重要，不能因为类型不同而降低权重。明确截止日期、任务描述中的考试/提交/课堂检查时间、前置准备和薄弱科目都应纳入判断；没有证据时不得臆造截止日期或任务内容。较难、需要集中注意力的任务优先安排在精神较好的时段；记忆、订正、整理等低负荷任务可穿插安排；尽量交替科目和任务强度，并均衡周六周日负荷。保留自由时间、午休和固定活动。只输出合法 JSON，不要 Markdown。';
+  const userPrompt='请对所有项目做综合分析，并给出真正有理由的周末排程建议。每项必须返回：key、rank（从1开始且唯一）、minutes（建议本周末投入分钟数）、dayPreference（sat/sun/either）、period（morning/afternoon/either）、blockMinutes（单次连续学习建议分钟数，15至75）、reason（结合该任务具体名称或备注说明安排理由）。rank 是综合优先级，不代表输入顺序。minutes 不得超过原预计时间；低于15分钟的项目按15分钟处理。任务很多或时间不足时，不要挤满时间表，允许未安排部分。格式：{"items":[{"key":"原key","rank":1,"minutes":45,"dayPreference":"sat","period":"morning","blockMinutes":45,"reason":"具体理由"}],"advice":"简短说明整体安排思路"}。\n数据：'+JSON.stringify(payload);
+  const raw=await window.studyFlowAIRequest(systemPrompt,userPrompt);
+  aiAdvice=parseAIJSON(raw);const recs=aiAdvice.items;if(!Array.isArray(recs)||recs.length!==items.length)throw new Error('AI 未覆盖全部学习内容，已改用原有排程。');
+  for(const itemAdvice of recs){const item=items.find(i=>i.key===itemAdvice.key),rank=Number(itemAdvice.rank),minutes=Number(itemAdvice.minutes),dayPreference=['sat','sun','either'].includes(itemAdvice.dayPreference)?itemAdvice.dayPreference:'either',period=['morning','afternoon','either'].includes(itemAdvice.period)?itemAdvice.period:'either',blockMinutes=Number(itemAdvice.blockMinutes);if(!item||aiRank.has(itemAdvice.key)||!Number.isInteger(rank)||rank<1||!Number.isFinite(minutes)||!Number.isFinite(blockMinutes))throw new Error('AI 排程结果包含无效或重复项目，已改用原有排程。');const maxMinutes=Math.max(15,Math.min(120,Number(item.estimate)||45));aiRank.set(itemAdvice.key,{rank,minutes:Math.max(15,Math.min(maxMinutes,minutes)),dayPreference,period,blockMinutes:Math.max(15,Math.min(75,blockMinutes)),reason:String(itemAdvice.reason||'结合任务内容安排')})}
+  const ranks=[...aiRank.values()].map(v=>v.rank);if(new Set(ranks).size!==ranks.length)throw new Error('AI 排序编号重复，已改用原有排程。');
+  status.textContent='AI 已完成任务理解与时段建议，系统正在校验时间冲突并生成时间表…';
  }catch(e){status.textContent='AI 辅助暂不可用，已改用原有自动排程：'+e.message;aiAdvice=null;aiRank.clear()}}
  else if($('plannerAIStatus'))$('plannerAIStatus').textContent='未启用 AI，使用 STUDY FLOW 原有规则生成计划。';
  let factor={light:.65,standard:.78,focused:.9}[config.intensity],slots=[];
  for(let day of ['sat','sun']){
-  let start=config[day+'Start'],end=config[day+'End'],cursor=start;
-  let breaks=config.blocked[day].slice();if(config.breakEnd>config.breakStart)breaks.push([config.breakStart,config.breakEnd]);
-  breaks.sort((a,b)=>a[0]-b[0]);
-  let usable=[];let pos=start;
+  let start=config[day+'Start'],end=config[day+'End'],breaks=config.blocked[day].slice();if(config.breakEnd>config.breakStart)breaks.push([config.breakStart,config.breakEnd]);
+  breaks.sort((a,b)=>a[0]-b[0]);let usable=[],pos=start;
   for(let [bs,be] of breaks){if(be<=pos||bs>=end)continue;if(bs>pos)usable.push([pos,Math.min(bs,end)]);pos=Math.max(pos,be)}
   if(pos<end)usable.push([pos,end]);
   usable.forEach(([a,b])=>{if(b-a>=20)slots.push({day,start:a,end:b,cursor:a})});
  }
- let totalCapacity=slots.reduce((a,s)=>a+(s.end-s.start),0),targetCapacity=totalCapacity*factor;
- let sorted=items.slice().sort((a,b)=>{const aa=aiRank.get(a.key),bb=aiRank.get(b.key);if(aa||bb){if(!aa)return 1;if(!bb)return -1;if(aa.rank!==bb.rank)return aa.rank-bb.rank}return scoreItem(b,config.mode)-scoreItem(a,config.mode)});
- if(aiRank.size)sorted.forEach(item=>{const advice=aiRank.get(item.key);if(advice)item.estimate=advice.minutes});
- // Use short work blocks for demanding tasks and reserve unallocated gaps.
- let scheduled=[],remaining=targetCapacity,dayLast={sat:'',sun:''},idx=0;
+ let totalCapacity=slots.reduce((a,s)=>a+(s.end-s.start),0),remaining=totalCapacity*factor;
+ let sorted=items.slice().sort((a,b)=>{const aa=aiRank.get(a.key),bb=aiRank.get(b.key);if(aa&&bb)return aa.rank-bb.rank;if(aa)return -1;if(bb)return 1;return scoreItem(b,config.mode)-scoreItem(a,config.mode)});
+ let scheduled=[],dayLoad={sat:0,sun:0},dayLast={sat:'',sun:''},unallocated=[];
  for(let item of sorted){
-  let desired=Math.max(15,Math.min(item.estimate||45,120));
-  if(remaining<15)break;
-  let need=Math.min(desired,remaining),left=need,parts=0;
-  while(left>=15&&parts<2){
-   let candidates=slots.filter(s=>s.end-s.cursor>=20);
+  const advice=aiRank.get(item.key),desired=Math.max(15,Math.min(advice?.minutes??item.estimate??45,120));
+  if(remaining<15){unallocated.push({name:item.name,minutes:desired});continue}
+  let left=Math.min(desired,remaining),parts=0;
+  while(left>=15&&parts<3){
+   let candidates=slots.filter(s=>s.end-s.cursor>=15);
    if(!candidates.length)break;
+   const preferred=candidates.filter(s=>(!advice||advice.dayPreference==='either'||s.day===advice.dayPreference)&&(!advice||advice.period==='either'||(advice.period==='morning'?s.cursor<(s.start+s.end)/2:s.cursor>=(s.start+s.end)/2)));
+   if(preferred.length)candidates=preferred;
    candidates.sort((a,b)=>{
-    let da=dayLast[a.day]===item.subject?1:0,db=dayLast[b.day]===item.subject?1:0;
-    return da-db||a.cursor-b.cursor;
+    const score=s=>{
+     const mid=(s.start+s.end)/2,period=advice?.period||'either';
+     const periodPenalty=period==='either'?0:period==='morning'?(s.cursor<mid?0:500):(s.cursor>=mid?0:500);
+     const dayPenalty=advice?.dayPreference==='either'||!advice?0:(s.day===advice.dayPreference?0:1000);
+     const sameSubject=dayLast[s.day]===item.subject?120:0;
+     return dayPenalty+periodPenalty+dayLoad[s.day]*.08+sameSubject+s.cursor*.001;
+    };
+    return score(a)-score(b);
    });
-   let slot=candidates[0],available=slot.end-slot.cursor;
-   let chunk=Math.min(left,available,parts===0?75:45);
+   const slot=candidates[0],available=slot.end-slot.cursor,blockLimit=advice?.blockMinutes||75;
+   let chunk=Math.min(left,available,blockLimit,75);
    if(chunk<15)break;
-   scheduled.push({id:uid(),day:slot.day,start:slot.cursor,end:slot.cursor+chunk,type:'study',itemKey:item.key,itemName:item.name,subject:item.subject,estimate:chunk,status:'pending',resourceName:item.resourceName||'',questions:item.questions||0,pages:item.pages||0});
-   slot.cursor+=chunk;left-=chunk;remaining-=chunk;parts++;dayLast[slot.day]=item.subject;
-   if(left>0){let gap=slot.end-slot.cursor;if(gap>=10){slot.cursor+=Math.min(10,gap);remaining-=Math.min(10,gap)}}
+   scheduled.push({id:uid(),day:slot.day,start:slot.cursor,end:slot.cursor+chunk,type:'study',itemKey:item.key,itemName:item.name,subject:item.subject,estimate:chunk,status:'pending',resourceName:item.resourceName||'',questions:item.questions||0,pages:item.pages||0,aiReason:advice?.reason||''});
+   slot.cursor+=chunk;left-=chunk;remaining-=chunk;dayLoad[slot.day]+=chunk;dayLast[slot.day]=item.subject;parts++;
+   if(left>=15){let gap=slot.end-slot.cursor;if(gap>=10){slot.cursor+=10;remaining=Math.max(0,remaining-10)}}
   }
-  if(parts===0)continue;
-  if(left>0){item.unallocated=left}
+  if(left>=15)unallocated.push({name:item.name,minutes:left});
  }
- // Add visible short breaks between adjacent study blocks, but never overwrite lunch or blocked time.
  for(let day of ['sat','sun']){
   let dayItems=scheduled.filter(x=>x.day===day).sort((a,b)=>a.start-b.start),withBreak=[];
   for(let i=0;i<dayItems.length;i++){withBreak.push(dayItems[i]);if(i<dayItems.length-1&&dayItems[i+1].start-dayItems[i].end>=8&&dayItems[i+1].start-dayItems[i].end<=20)withBreak.push({id:uid(),day,start:dayItems[i].end,end:dayItems[i].end+10,type:'break',itemName:'短暂休息',subject:'休息',status:'pending'})}
   scheduled=scheduled.filter(x=>x.day!==day).concat(withBreak);
  }
- generatedPlan={id:uid(),createdAt:Date.now(),dates:weekendDates(),config,selectedIds:items.map(x=>x.key),items:scheduled.sort((a,b)=>a.day.localeCompare(b.day)||a.start-b.start),unallocated:items.filter(x=>x.unallocated).map(x=>({name:x.name,minutes:x.unallocated})),saved:false};
- if(aiAdvice?.advice&&$('plannerAIStatus'))$('plannerAIStatus').textContent='AI 建议：'+aiAdvice.advice+' 时间表已生成，你可以继续调整。';
- renderPlanOutput();toast(aiRank.size?'AI 辅助周末计划已生成':'已生成周末计划，可以继续调整');
+ generatedPlan={id:uid(),createdAt:Date.now(),dates:weekendDates(),config,selectedIds:items.map(x=>x.key),items:scheduled.sort((a,b)=>a.day.localeCompare(b.day)||a.start-b.start),unallocated,saved:false};
+ if(aiAdvice?.advice&&$('plannerAIStatus'))$('plannerAIStatus').textContent='AI 分析完成：'+aiAdvice.advice+' 时间表已生成，你可以继续调整。';
+ renderPlanOutput();toast(aiRank.size?'AI 综合分析周末计划已生成':'已生成周末计划，可以继续调整');
 }
 function renderPlanOutput(){
  let p=generatedPlan;if(!p){$('planOutput').innerHTML='<div class="empty">尚未生成计划。</div>';return}
@@ -558,5 +562,23 @@ function initDate(){let d=new Date();$('todayText').textContent=d.toLocaleDateSt
 <script src="./ai.js"></script>
 <script src="./cloud-sync.js"></script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(e=>console.warn("PWA 缓存注册失败",e)));}</script>
+<script>
+/* 关闭普通表单字段的浏览器历史自动补全；动态弹窗表单同样适用。 */
+(function(){
+ const applyAutocompletePolicy=root=>{
+  root.querySelectorAll?.('form').forEach(form=>form.setAttribute('autocomplete','off'));
+  root.querySelectorAll?.('input,textarea').forEach(el=>{
+   const type=(el.getAttribute('type')||'text').toLowerCase();
+   if(['password','date','time','datetime-local','month','week','checkbox','radio','file','hidden','submit','button','reset','image','range','color'].includes(type))return;
+   el.setAttribute('autocomplete','off');
+  });
+ };
+ applyAutocompletePolicy(document);
+ const observer=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
+  if(node.nodeType===1){applyAutocompletePolicy(node);if(node.matches?.('form,input,textarea'))applyAutocompletePolicy(node.parentElement||node)}
+ })));
+ observer.observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
 </body>
 </html>
