@@ -486,7 +486,7 @@ async function generatePlan(){
      const periodPenalty=period==='either'?0:period==='morning'?(s.cursor<mid?0:500):(s.cursor>=mid?0:500);
      const dayPenalty=advice?.dayPreference==='either'||!advice?0:(s.day===advice.dayPreference?0:1000);
      const sameSubject=dayLast[s.day]===item.subject?120:0;
-     return dayPenalty+periodPenalty+dayLoad[s.day]*.08+sameSubject+s.cursor*.001;
+     return dayPenalty+periodPenalty+dayLoad[s.day]*1.5+sameSubject+s.cursor*.02;
     };
     return score(a)-score(b);
    });
